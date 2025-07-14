@@ -30,7 +30,7 @@ bool ConfigManager::loadConfig(const std::string& configFile) {
         std::cerr << "配置文件解析错误: " << e.what() << std::endl;
         return false;
     } catch (const std::exception& e) {
-        std::cerr << "加载配置文件时发生错误: " << e.what() << std::endl;
+        std::cerr << "加载配置文件时发生错误1: " << e.what() << std::endl;
         return false;
     }
 }
