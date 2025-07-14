@@ -14,6 +14,8 @@ ConfigManager* ConfigManager::getInstance() {
 
 bool ConfigManager::loadConfig(const std::string& configFile) {
     try {
+        std::cout << "当前工作目录: " << std::filesystem::current_path() << std::endl;
+        std::cout << "当前配置文件: " << configFile << std::endl;
         std::ifstream file(configFile);
         if (!file.is_open()) {
             std::cerr << "无法打开配置文件: " << configFile << std::endl;

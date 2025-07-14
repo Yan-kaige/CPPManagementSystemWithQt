@@ -85,6 +85,7 @@ FORMS += mainwindow.ui
 # -----------------------------------
 TRANSLATIONS += testcppqt_zh_CN.ts
 CONFIG += lrelease embed_translations
+CONFIG_FILES += config/config.json
 
 # -----------------------------------
 # 安装路径（可忽略）
