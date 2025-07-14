@@ -1,7 +1,7 @@
 QT += core gui widgets
 
 # -----------------------------------
-# 编译配置：强制使用 Release 模式（避免 _ITERATOR_DEBUG_LEVEL 冲突）
+# 编译配置：强制使用 Release 模式（避免 _ITERATOR_DEB11UG_LEVEL 冲突）
 # -----------------------------------
 CONFIG -= debug
 CONFIG += release
