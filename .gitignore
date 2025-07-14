@@ -1,0 +1,41 @@
+# 忽略构建目录
+build/
+*.obj
+*.o
+*.exe
+*.dll
+*.lib
+*.pch
+*.ilk
+*.pdb
+
+# 忽略 Qt Creator 用户设置
+*.pro.user
+*.pro.user.*
+*.qbs.user
+*.qbs.user.*
+
+# 忽略 Qt 编译中间产物
+Makefile*
+*.autosave
+*.moc
+*.qrc.depends
+*.qrc.cpp
+*.qrc
+*.ts~
+*.qm
+*.bak
+*.swp
+*~
+
+# 编译器生成的缓存和日志
+.vscode/
+CMakeFiles/
+CMakeCache.txt
+*.log
+
+# 忽略翻译文件中临时修改
+*.ts~
+
+# 忽略配置文件（可选，如果 config.json 为用户本地）
+config/config.json
