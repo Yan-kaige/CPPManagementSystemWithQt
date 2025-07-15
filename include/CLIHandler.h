@@ -175,4 +175,6 @@ public:
     bool handleMinioStatus(const std::vector<std::string>& args);
 
     std::pair<bool, User> getCurrentUserForUI();
+    std::vector<Document> getUserDocsForUI(int userId);
+    std::vector<Document> getSearchedDocsForUI(int userId, const std::string& keyword);
 };

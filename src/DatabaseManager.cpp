@@ -5,7 +5,6 @@
 #include <QDir>
 #include <mutex>
 #include <sstream>
-
 DatabaseManager::DatabaseManager() : db(nullptr), isConnected(false) {
 
 }
@@ -411,8 +410,8 @@ Result<std::vector<Document>> DatabaseManager::getDocumentsByOwner(int ownerId, 
         doc.file_path = row[3] ? row[3] : "";
         doc.minio_key = row[4] ? row[4] : "";
         doc.owner_id = std::stoi(row[5]);
-        doc.created_at = std::chrono::system_clock::now();
-        doc.updated_at = std::chrono::system_clock::now();
+        doc.created_at = Utils::parseTimestamp(row[6] ? row[6] : "");
+        doc.updated_at = Utils::parseTimestamp(row[7] ? row[7] : "");
         doc.file_size = std::stoull(row[8] ? row[8] : "0");
         doc.content_type = row[9] ? row[9] : "application/octet-stream";
         documents.push_back(doc);
@@ -450,8 +449,8 @@ Result<std::vector<Document>> DatabaseManager::getAllDocuments(int limit, int of
         doc.file_path = row[3] ? row[3] : "";
         doc.minio_key = row[4] ? row[4] : "";
         doc.owner_id = std::stoi(row[5]);
-        doc.created_at = std::chrono::system_clock::now();
-        doc.updated_at = std::chrono::system_clock::now();
+        doc.created_at = Utils::parseTimestamp(row[6] ? row[6] : "");
+        doc.updated_at = Utils::parseTimestamp(row[7] ? row[7] : "");
         doc.file_size = std::stoull(row[8] ? row[8] : "0");
         doc.content_type = row[9] ? row[9] : "application/octet-stream";
         documents.push_back(doc);
@@ -569,8 +568,8 @@ Result<std::vector<Document>> DatabaseManager::searchDocuments(const std::string
         doc.file_path = row[3] ? row[3] : "";
         doc.minio_key = row[4] ? row[4] : "";
         doc.owner_id = std::stoi(row[5]);
-        doc.created_at = std::chrono::system_clock::now();
-        doc.updated_at = std::chrono::system_clock::now();
+        doc.created_at = Utils::parseTimestamp(row[6] ? row[6] : "");
+        doc.updated_at = Utils::parseTimestamp(row[7] ? row[7] : "");
         doc.file_size = std::stoull(row[8] ? row[8] : "0");
         doc.content_type = row[9] ? row[9] : "application/octet-stream";
         documents.push_back(doc);

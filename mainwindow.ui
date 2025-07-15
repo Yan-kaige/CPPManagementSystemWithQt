@@ -205,6 +205,16 @@
      </widget>
     </item>
     <item>
+     <widget class="QPushButton" name="btnViewDocs">
+      <property name="text">
+       <string>查看文档</string>
+      </property>
+      <property name="visible">
+       <bool>false</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
      <widget class="QGroupBox" name="groupBoxUsers">
       <property name="title">
        <string>用户列表</string>

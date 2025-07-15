@@ -1861,3 +1861,24 @@ std::pair<bool, User> CLIHandler::getCurrentUserForUI() {
     }
     return {false, User{}};
 }
+
+std::vector<Document> CLIHandler::getUserDocsForUI(int userId) {
+    auto result = dbManager->getDocumentsByOwner(userId, 100, 0);
+    if (result.success) {
+        return result.data.value();
+    }
+    return {};
+}
+
+std::vector<Document> CLIHandler::getSearchedDocsForUI(int userId, const std::string& keyword) {
+    auto result = dbManager->searchDocuments(keyword, 100);
+    std::vector<Document> filtered;
+    if (result.success) {
+        for (const auto& doc : result.data.value()) {
+            if (doc.owner_id == userId) {
+                filtered.push_back(doc);
+            }
+        }
+    }
+    return filtered;
+}

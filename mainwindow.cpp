@@ -5,6 +5,7 @@
 #include "DatabaseManager.h" // 为了 User 结构体
 #include <QPushButton>
 #include <QApplication>
+#include "DocListDialog.h"
 
 extern CLIHandler* g_cliHandler; // 假设有全局CLIHandler指针
 
@@ -227,14 +228,17 @@ void MainWindow::updateCurrentUserInfo()
 {
     if (!g_cliHandler) {
         ui->labelCurrentUser->setText("未登录");
+        ui->btnViewDocs->setVisible(false);
         return;
     }
     auto result = g_cliHandler->getCurrentUserForUI();
     if (result.first) {
         const User& user = result.second;
         ui->labelCurrentUser->setText(QString("用户：%1\n邮箱：%2").arg(QString::fromStdString(user.username), QString::fromStdString(user.email)));
+        ui->btnViewDocs->setVisible(true);
     } else {
         ui->labelCurrentUser->setText("未登录");
+        ui->btnViewDocs->setVisible(false);
     }
 }
 
@@ -282,6 +286,17 @@ void MainWindow::on_btnChangePassword_clicked()
 void MainWindow::on_btnQuit_clicked()
 {
     QApplication::quit();
+}
+
+void MainWindow::on_btnViewDocs_clicked()
+{
+    if (!g_cliHandler) return;
+    auto userResult = g_cliHandler->getCurrentUserForUI();
+    if (!userResult.first) return;
+    int userId = userResult.second.id;
+    std::vector<Document> docs = g_cliHandler->getUserDocsForUI(userId);
+    DocListDialog dlg(docs, this);
+    dlg.exec();
 }
 
 

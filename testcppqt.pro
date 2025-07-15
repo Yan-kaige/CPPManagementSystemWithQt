@@ -57,7 +57,8 @@ SOURCES += \
     src/Utils.cpp \
     src/linenoise.cpp \
     src/ConvertUTF.cpp \
-    src/wcwidth.cpp
+    src/wcwidth.cpp \
+    src/DocListDialog.cpp
 
 # -----------------------------------
 # 头文件
@@ -73,6 +74,7 @@ HEADERS += \
     include/MinioClient.h \
     include/RedisManager.h \
     include/linenoise.h \
+    include/DocListDialog.h \
     mainwindow.h
 
 # -----------------------------------
