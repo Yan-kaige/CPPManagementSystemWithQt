@@ -13,6 +13,8 @@ private slots:
     void onDeleteDocClicked();
     void onAddDocClicked();
     void onSearchDocClicked();
+    void onDownloadDocClicked();
+    void onEditDocClicked();
 private:
     QTableWidget* tableWidget;
     std::vector<Document> currentDocs;
