@@ -1853,3 +1853,11 @@ std::vector<User> CLIHandler::getSearchedUsersForUI(const std::string& keyword) 
     }
     return {};
 }
+
+std::pair<bool, User> CLIHandler::getCurrentUserForUI() {
+    auto result = authManager->getCurrentUser();
+    if (result.success) {
+        return {true, result.data.value()};
+    }
+    return {false, User{}};
+}

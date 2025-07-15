@@ -173,4 +173,6 @@ public:
     bool handleDeleteFile(const std::vector<std::string>& args);
     bool handleFileInfo(const std::vector<std::string>& args);
     bool handleMinioStatus(const std::vector<std::string>& args);
+
+    std::pair<bool, User> getCurrentUserForUI();
 };

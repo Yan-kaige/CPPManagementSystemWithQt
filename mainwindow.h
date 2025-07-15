@@ -31,5 +31,8 @@ private slots:
     void on_btnRegisterUser_clicked();
     void onDeleteUserClicked();
     void onToggleUserActiveClicked();
+    void updateCurrentUserInfo();
+    void on_btnChangePassword_clicked();
+    void on_btnQuit_clicked();
 };
 #endif // MAINWINDOW_H

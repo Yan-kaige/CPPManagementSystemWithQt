@@ -4,6 +4,7 @@
 #include "CLIHandler.h"
 #include "DatabaseManager.h" // 为了 User 结构体
 #include <QPushButton>
+#include <QApplication>
 
 extern CLIHandler* g_cliHandler; // 假设有全局CLIHandler指针
 
@@ -32,6 +33,7 @@ void MainWindow::on_btnLogin_clicked()
     if (ok) {
         QMessageBox::information(this, "登录", "登录成功");
         updateUserList();
+        updateCurrentUserInfo();
     } else {
         QMessageBox::warning(this, "登录", "登录失败，请检查用户名和密码");
     }
@@ -48,6 +50,7 @@ void MainWindow::on_btnLogout_clicked()
     if (ok) {
         QMessageBox::information(this, "登出", "登出成功");
         ui->tableWidgetUsers->setRowCount(0);
+        updateCurrentUserInfo();
     } else {
         QMessageBox::warning(this, "登出", "登出失败，当前未登录");
     }
@@ -147,6 +150,7 @@ void MainWindow::onDeleteUserClicked()
     if (ok) {
         QMessageBox::information(this, "删除用户", "删除成功！");
         updateUserList();
+        updateCurrentUserInfo();
     } else {
         QMessageBox::warning(this, "删除用户", "删除失败，不能删除当前登录用户或用户不存在");
     }
@@ -172,6 +176,7 @@ void MainWindow::onToggleUserActiveClicked()
         if (ok) {
             QMessageBox::information(this, "禁用用户", "禁用成功！");
             updateUserList();
+            updateCurrentUserInfo();
         } else {
             QMessageBox::warning(this, "禁用用户", "禁用失败");
         }
@@ -184,6 +189,7 @@ void MainWindow::onToggleUserActiveClicked()
         if (ok) {
             QMessageBox::information(this, "激活用户", "激活成功！");
             updateUserList();
+            updateCurrentUserInfo();
         } else {
             QMessageBox::warning(this, "激活用户", "激活失败");
         }
@@ -211,9 +217,71 @@ void MainWindow::on_btnRegisterUser_clicked()
         ui->lineEditRegisterPassword->clear();
         ui->lineEditRegisterEmail->clear();
         updateUserList();
+        updateCurrentUserInfo();
     } else {
         QMessageBox::warning(this, "注册", "注册失败，请检查输入或用户名/邮箱是否已存在");
     }
+}
+
+void MainWindow::updateCurrentUserInfo()
+{
+    if (!g_cliHandler) {
+        ui->labelCurrentUser->setText("未登录");
+        return;
+    }
+    auto result = g_cliHandler->getCurrentUserForUI();
+    if (result.first) {
+        const User& user = result.second;
+        ui->labelCurrentUser->setText(QString("用户：%1\n邮箱：%2").arg(QString::fromStdString(user.username), QString::fromStdString(user.email)));
+    } else {
+        ui->labelCurrentUser->setText("未登录");
+    }
+}
+
+void MainWindow::on_btnChangePassword_clicked()
+{
+    if (!g_cliHandler) {
+        QMessageBox::critical(this, "错误", "CLIHandler 未初始化");
+        return;
+    }
+    // 检查是否已登录
+    auto result = g_cliHandler->getCurrentUserForUI();
+    if (!result.first) {
+        QMessageBox::warning(this, "修改密码", "请先登录后再修改密码");
+        return;
+    }
+    QString oldPass = ui->lineEditOldPassword->text();
+    QString newPass = ui->lineEditNewPassword->text();
+    QString confirmPass = ui->lineEditConfirmPassword->text();
+    if (oldPass.isEmpty() || newPass.isEmpty() || confirmPass.isEmpty()) {
+        QMessageBox::warning(this, "修改密码", "请填写完整的原密码、新密码和确认密码");
+        return;
+    }
+    if (newPass != confirmPass) {
+        QMessageBox::warning(this, "修改密码", "新密码与确认密码不一致");
+        return;
+    }
+    std::vector<std::string> args = {"changepass", oldPass.toStdString(), newPass.toStdString()};
+    bool ok = g_cliHandler->handleChangePassword(args);
+    if (ok) {
+        QMessageBox::information(this, "修改密码", "密码修改成功，请重新登录");
+        // 清空输入框
+        ui->lineEditOldPassword->clear();
+        ui->lineEditNewPassword->clear();
+        ui->lineEditConfirmPassword->clear();
+        // 自动登出
+        std::vector<std::string> logoutArgs = {"logout"};
+        g_cliHandler->handleLogout(logoutArgs);
+        updateUserList();
+        updateCurrentUserInfo();
+    } else {
+        QMessageBox::warning(this, "修改密码", "密码修改失败，请检查原密码或新密码格式");
+    }
+}
+
+void MainWindow::on_btnQuit_clicked()
+{
+    QApplication::quit();
 }
 
 
