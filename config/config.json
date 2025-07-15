@@ -1,0 +1,44 @@
+{
+  "database": {
+    "type": "mysql",
+    "sqlite": {
+      "filename": "data/management.db"
+    },
+    "mysql": {
+      "host": "localhost",
+      "port": 3307,
+      "username": "root",
+      "password": "123456",
+      "database": "cpp_document"
+    }
+  },
+  "redis": {
+    "host": "127.0.0.1",
+    "port": 6379,
+    "password": "",
+    "database": 0,
+    "timeout": 5000
+  },
+  "minio": {
+    "endpoint": "127.0.0.1:9001",
+    "access_key": "JF3z7qumoF9ov3dvbOEf",
+    "secret_key": "E8eF8l8PdN8hgKlZSkA2HqksvSm76XqpC4GO0FuU",
+    "bucket": "cpp",
+    "secure": false
+  },
+  "auth": {
+    "session_timeout": 3600,
+    "password_min_length": 6,
+    "max_login_attempts": 5
+  },
+  "logging": {
+    "level": "INFO",
+    "file": "logs/system.log",
+    "max_size": 10485760,
+    "backup_count": 5
+  },
+  "cache": {
+    "ttl": 1800,
+    "max_entries": 1000
+  }
+}
