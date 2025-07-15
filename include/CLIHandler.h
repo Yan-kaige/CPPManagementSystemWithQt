@@ -74,13 +74,10 @@ private:
 
     // 用户认证命令
     bool handleRegister(const std::vector<std::string>& args);
-    bool handleLogin(const std::vector<std::string>& args);
-    bool handleLogout(const std::vector<std::string>& args);
     bool handleWhoami(const std::vector<std::string>& args);
     bool handleChangePassword(const std::vector<std::string>& args);
 
     // 用户管理命令
-    bool handleListUsers(const std::vector<std::string>& args);
     bool handleDeleteUser(const std::vector<std::string>& args);
     bool handleSearchUsers(const std::vector<std::string>& args);
     bool handleDeactivateUser(const std::vector<std::string>& args);
@@ -168,4 +165,10 @@ public:
 
     static void completionCallback(const char* prefix, linenoiseCompletions* lc);
     static CLIHandler* instance; // 用于补全回调访问
+
+    // 公开给UI调用的命令处理
+    bool handleLogin(const std::vector<std::string>& args);
+    bool handleLogout(const std::vector<std::string>& args);
+    bool handleListUsers(const std::vector<std::string>& args);
+    std::vector<User> getAllUsersForUI();
 };

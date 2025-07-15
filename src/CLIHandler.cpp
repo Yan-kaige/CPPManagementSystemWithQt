@@ -1837,3 +1837,11 @@ void CLIHandler::completionCallback(const char* prefix, linenoiseCompletions* lc
         }
     }
 }
+
+std::vector<User> CLIHandler::getAllUsersForUI() {
+    auto result = authManager->getAllUsers();
+    if (result.success) {
+        return result.data.value();
+    }
+    return {};
+}

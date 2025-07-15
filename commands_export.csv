@@ -1,0 +1,80 @@
+﻿命令名,描述,用法,示例,需要登录,别名
+"?","显示帮助信息","help [命令名]","help",否,h|?
+"activate","激活用户","activate <用户ID>","activate 2",是,enable
+"adddoc","添加文档","adddoc <标题> <描述> <文件路径>","adddoc "我的文档" "这是一个测试文档" /path/to/file.pdf",是,adddocument|upload
+"adddocument","添加文档","adddoc <标题> <描述> <文件路径>","adddoc "我的文档" "这是一个测试文档" /path/to/file.pdf",是,adddocument|upload
+"changepass","修改密码","changepass <旧密码> <新密码>","changepass oldpass newpass",是,passwd
+"clearsess","清除所有会话","clearsessions","clearsessions",是,clearsess
+"clearsessions","清除所有会话","clearsessions","clearsessions",是,clearsess
+"deactivate","禁用用户","deactivate <用户ID>","deactivate 2",是,disable
+"deldoc","删除文档","deletedoc <文档ID>","deletedoc 1",是,deletedocument|deldoc
+"deletedoc","删除文档","deletedoc <文档ID>","deletedoc 1",是,deletedocument|deldoc
+"deletedocument","删除文档","deletedoc <文档ID>","deletedoc 1",是,deletedocument|deldoc
+"deletefile","删除MinIO中的文件","deletefile <对象名称>","deletefile myfile.pdf",是,delfile
+"deleteuser","删除用户","deleteuser <用户ID>","deleteuser 2",是,deluser
+"delfile","删除MinIO中的文件","deletefile <对象名称>","deletefile myfile.pdf",是,delfile
+"deluser","删除用户","deleteuser <用户ID>","deleteuser 2",是,deluser
+"disable","禁用用户","deactivate <用户ID>","deactivate 2",是,disable
+"doc","获取文档信息","getdoc <文档ID>","getdoc 1",是,getdocument|doc
+"docs","列出文档","listdocs [数量] [偏移量]","listdocs",是,listdocuments|docs
+"download","从MinIO下载文件","download <对象名称> <本地文件路径>","download myfile.pdf /path/to/downloaded.pdf",是,downloadfile
+"downloadfile","从MinIO下载文件","download <对象名称> <本地文件路径>","download myfile.pdf /path/to/downloaded.pdf",是,downloadfile
+"editdoc","更新文档信息","updatedoc <文档ID> <标题> <描述>","updatedoc 1 "新标题" "新描述"",是,updatedocument|editdoc
+"enable","激活用户","activate <用户ID>","activate 2",是,enable
+"excel-preview","预览Excel文件内容","preview-excel <文件路径> [最大预览行数]","preview-excel data.xlsx",是,preview|excel-preview
+"excel-validate","验证Excel文件格式","validate-excel <文件路径> <数据类型>","validate-excel users.xlsx users",是,validate|excel-validate
+"exit","退出程序","exit",,否,quit|q
+"export-commands-csv","导出所有命令为CSV文件","export-commands-csv <输出文件路径>","export-commands-csv D://test//commands_export.csv",否,
+"export-docs-excel","导出文档数据到Excel文件","export-docs-excel <文件路径> [包含标题行]","export-docs-excel documents_export.xlsx",是,exportdocs|export-documents
+"export-documents","导出文档数据到Excel文件","export-docs-excel <文件路径> [包含标题行]","export-docs-excel documents_export.xlsx",是,exportdocs|export-documents
+"export-users","导出用户数据到Excel文件","export-users-excel <文件路径> [包含标题行]","export-users-excel users_export.xlsx",是,exportusers|export-users
+"export-users-excel","导出用户数据到Excel文件","export-users-excel <文件路径> [包含标题行]","export-users-excel users_export.xlsx",是,exportusers|export-users
+"exportdocs","导出文档数据到Excel文件","export-docs-excel <文件路径> [包含标题行]","export-docs-excel documents_export.xlsx",是,exportdocs|export-documents
+"exportusers","导出用户数据到Excel文件","export-users-excel <文件路径> [包含标题行]","export-users-excel users_export.xlsx",是,exportusers|export-users
+"fileinfo","获取文件信息","fileinfo <对象名称>","fileinfo myfile.pdf",是,info
+"find","搜索用户","search <关键词>","search alice",是,find
+"finddocs","搜索文档","searchdocs <关键词>","searchdocs "报告"",是,searchdocuments|finddocs
+"gen-doc-template","生成文档导入模板","gen-doc-template <文件路径>","gen-doc-template document_template.xlsx",是,gentemplate|template-doc
+"gen-user-template","生成用户导入模板","gen-user-template <文件路径>","gen-user-template user_template.xlsx",是,gentemplate|template-user
+"gentemplate","生成文档导入模板","gen-doc-template <文件路径>","gen-doc-template document_template.xlsx",是,gentemplate|template-doc
+"getdoc","获取文档信息","getdoc <文档ID>","getdoc 1",是,getdocument|doc
+"getdocument","获取文档信息","getdoc <文档ID>","getdoc 1",是,getdocument|doc
+"h","显示帮助信息","help [命令名]","help",否,h|?
+"help","显示帮助信息","help [命令名]","help",否,h|?
+"import-docs-excel","从Excel文件导入文档数据","import-docs-excel <文件路径> [跳过标题行]","import-docs-excel documents.xlsx",是,importdocs|import-documents
+"import-documents","从Excel文件导入文档数据","import-docs-excel <文件路径> [跳过标题行]","import-docs-excel documents.xlsx",是,importdocs|import-documents
+"import-users","从Excel文件导入用户数据","import-users-excel <文件路径> [跳过标题行]","import-users-excel users.xlsx",是,importusers|import-users
+"import-users-excel","从Excel文件导入用户数据","import-users-excel <文件路径> [跳过标题行]","import-users-excel users.xlsx",是,importusers|import-users
+"importdocs","从Excel文件导入文档数据","import-docs-excel <文件路径> [跳过标题行]","import-docs-excel documents.xlsx",是,importdocs|import-documents
+"importusers","从Excel文件导入用户数据","import-users-excel <文件路径> [跳过标题行]","import-users-excel users.xlsx",是,importusers|import-users
+"info","获取文件信息","fileinfo <对象名称>","fileinfo myfile.pdf",是,info
+"listdocs","列出文档","listdocs [数量] [偏移量]","listdocs",是,listdocuments|docs
+"listdocuments","列出文档","listdocs [数量] [偏移量]","listdocs",是,listdocuments|docs
+"listfiles","列出MinIO中的文件","listfiles [前缀]","listfiles",是,lsfiles
+"listusers","在Qt界面中查看所有用户","在Qt界面点击“用户管理”或相关按钮","在Qt界面操作",是,listusers
+"login","通过Qt界面登录用户","在Qt界面输入用户名和密码后点击“登录”按钮","在Qt界面操作",否,
+"logout","通过Qt界面登出用户","在Qt界面点击“登出”或“退出登录”按钮","在Qt界面操作",是,
+"lsfiles","列出MinIO中的文件","listfiles [前缀]","listfiles",是,lsfiles
+"minio","检查MinIO连接状态","minio-status","minio-status",否,minio
+"minio-status","检查MinIO连接状态","minio-status","minio-status",否,minio
+"passwd","修改密码","changepass <旧密码> <新密码>","changepass oldpass newpass",是,passwd
+"preview","预览Excel文件内容","preview-excel <文件路径> [最大预览行数]","preview-excel data.xlsx",是,preview|excel-preview
+"preview-excel","预览Excel文件内容","preview-excel <文件路径> [最大预览行数]","preview-excel data.xlsx",是,preview|excel-preview
+"q","退出程序","exit",,否,quit|q
+"quit","退出程序","exit",,否,quit|q
+"register","用户注册","register <用户名> <密码> <邮箱>","register alice 123456 alice@example.com",否,
+"search","搜索用户","search <关键词>","search alice",是,find
+"searchdocs","搜索文档","searchdocs <关键词>","searchdocs "报告"",是,searchdocuments|finddocs
+"searchdocuments","搜索文档","searchdocs <关键词>","searchdocs "报告"",是,searchdocuments|finddocs
+"session","显示活跃会话","sessions","sessions",是,session
+"sessions","显示活跃会话","sessions","sessions",是,session
+"template-doc","生成文档导入模板","gen-doc-template <文件路径>","gen-doc-template document_template.xlsx",是,gentemplate|template-doc
+"template-user","生成用户导入模板","gen-user-template <文件路径>","gen-user-template user_template.xlsx",是,gentemplate|template-user
+"updatedoc","更新文档信息","updatedoc <文档ID> <标题> <描述>","updatedoc 1 "新标题" "新描述"",是,updatedocument|editdoc
+"updatedocument","更新文档信息","updatedoc <文档ID> <标题> <描述>","updatedoc 1 "新标题" "新描述"",是,updatedocument|editdoc
+"upload","上传文件到MinIO","upload <本地文件路径> [对象名称]","upload /path/to/file.pdf",是,uploadfile
+"uploadfile","上传文件到MinIO","upload <本地文件路径> [对象名称]","upload /path/to/file.pdf",是,uploadfile
+"users","列出所有用户","users [数量]","users",是,listusers
+"validate","验证Excel文件格式","validate-excel <文件路径> <数据类型>","validate-excel users.xlsx users",是,validate|excel-validate
+"validate-excel","验证Excel文件格式","validate-excel <文件路径> <数据类型>","validate-excel users.xlsx users",是,validate|excel-validate
+"whoami","显示当前用户信息","whoami","whoami",是,

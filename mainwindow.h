@@ -2,6 +2,9 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QTableWidget>
+#include <QLineEdit>
+#include <QPushButton>
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -19,5 +22,10 @@ public:
 
 private:
     Ui::MainWindow *ui;
+
+private slots:
+    void on_btnLogin_clicked();
+    void on_btnLogout_clicked();
+    void updateUserList();
 };
 #endif // MAINWINDOW_H
