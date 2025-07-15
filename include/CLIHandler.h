@@ -30,7 +30,7 @@ private:
     std::unique_ptr<DatabaseManager> dbManager;
     std::unique_ptr<AuthManager> authManager;
     std::unique_ptr<RedisManager> redisManager;
-    std::unique_ptr<MinioClient> minioClient;
+
     std::unique_ptr<ImportExportManager> importExportManager;
 
     // 命令映射
@@ -66,6 +66,8 @@ private:
 public:
     CLIHandler();
     ~CLIHandler();
+
+      std::unique_ptr<MinioClient> minioClient;
 
     // 初始化和运行
     bool initialize();

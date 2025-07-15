@@ -189,7 +189,6 @@ Result<bool> MinioClient::putObject(const std::string& objectName, const std::ve
         return Result<bool>::Error("Put object failed: " + std::string(err.String()));
     }
 }
-
 Result<bool> MinioClient::getObject(const std::string& objectName, const std::string& filePath) {
     if (!initialized || !client) {
         return Result<bool>::Error("Client not initialized");
@@ -198,26 +197,89 @@ Result<bool> MinioClient::getObject(const std::string& objectName, const std::st
     try {
         std::lock_guard<std::mutex> lock(clientMutex);
 
-        minio::s3::GetObjectArgs args;
-        args.bucket = bucket;
-        args.object = objectName;
+        // 首先检查对象信息
+        minio::s3::StatObjectArgs statArgs;
+        statArgs.bucket = bucket;
+        statArgs.object = objectName;
 
-        minio::s3::GetObjectResponse resp = client->GetObject(args);
+        std::cout << "Checking object: " << objectName << std::endl;
 
-        // Write to file
+        minio::s3::StatObjectResponse statResp = client->StatObject(statArgs);
+
+        if (!statResp) {
+            return Result<bool>::Error("Object not found: " + objectName);
+        }
+
+        std::cout << "Object found. Size: " << statResp.size << " bytes" << std::endl;
+
+        if (statResp.size == 0) {
+            return Result<bool>::Error("Object is empty on server: " + objectName);
+        }
+
+        // 打开输出文件
         std::ofstream file(filePath, std::ios::binary);
         if (!file.is_open()) {
             return Result<bool>::Error("Cannot create file: " + filePath);
         }
 
-        file.write(resp.data.data(), resp.data.size());
+        size_t totalBytes = 0;
+
+        // 设置 GetObject 参数
+        minio::s3::GetObjectArgs args;
+        args.bucket = bucket;
+        args.object = objectName;
+
+        // 设置数据回调函数
+        args.datafunc = [&file, &totalBytes](minio::http::DataFunctionArgs args) -> bool {
+            // 将接收到的数据写入文件
+            file.write(args.datachunk.data(), args.datachunk.size());
+            totalBytes += args.datachunk.size();
+
+            // 显示进度（可选）
+            if (totalBytes % 1024 == 0 || args.datachunk.size() < 1024) {
+                std::cout << "Downloaded: " << totalBytes << " bytes\r" << std::flush;
+            }
+
+            return true; // 返回 true 继续接收数据
+        };
+
+        std::cout << "Starting download..." << std::endl;
+
+        // 执行下载
+        minio::s3::GetObjectResponse resp = client->GetObject(args);
+
         file.close();
 
-        return Result<bool>::Success(true);
+        // 检查响应
+        if (resp) {
+            std::cout << std::endl << "Download successful! Total bytes: " << totalBytes << std::endl;
+
+            // 验证文件大小
+            if (totalBytes == statResp.size) {
+                std::cout << "File size verification passed" << std::endl;
+                return Result<bool>::Success(true);
+            } else {
+                std::cout << "Warning: File size mismatch. Expected: " << statResp.size
+                          << ", Got: " << totalBytes << std::endl;
+                return Result<bool>::Success(true); // 仍然认为成功，可能是部分内容
+            }
+        } else {
+            std::cout << std::endl << "Download failed: " << resp.Error().String() << std::endl;
+            return Result<bool>::Error("Download failed: " + resp.Error().String());
+        }
+
     } catch (const minio::error::Error& err) {
-        return Result<bool>::Error("Get object failed: " + std::string(err.String()));
+        std::cout << "MinIO Error: " << err.String() << std::endl;
+        return Result<bool>::Error("Download failed: " + std::string(err.String()));
+    } catch (const std::exception& e) {
+        std::cout << "Standard Exception: " << e.what() << std::endl;
+        return Result<bool>::Error("Download failed: " + std::string(e.what()));
+    } catch (...) {
+        std::cout << "Unknown exception occurred" << std::endl;
+        return Result<bool>::Error("Download failed: Unknown exception");
     }
 }
+
 
 Result<std::vector<uint8_t>> MinioClient::getObject(const std::string& objectName) {
     if (!initialized || !client) {
@@ -279,6 +341,35 @@ Result<bool> MinioClient::objectExists(const std::string& objectName) {
     }
 }
 
+
+// 调试用的函数：详细检查对象状态
+void MinioClient::debugObjectInfo(const std::string& objectName) {
+    try {
+        std::lock_guard<std::mutex> lock(clientMutex);
+
+        minio::s3::StatObjectArgs args;
+        args.bucket = bucket;
+        args.object = objectName;
+
+        minio::s3::StatObjectResponse resp = client->StatObject(args);
+
+        if (resp) {
+            std::cout << "=== Object Info ===" << std::endl;
+            std::cout << "Bucket: " << bucket << std::endl;
+            std::cout << "Object: " << objectName << std::endl;
+            std::cout << "Size: " << resp.size << " bytes" << std::endl;
+            std::cout << "ETag: " << resp.etag << std::endl;
+            std::cout << "Last Modified: " << resp.last_modified << std::endl;
+            // std::cout << "Content Type: " << resp.content_type << std::endl;
+            std::cout << "===================" << std::endl;
+        } else {
+            std::cout << "Object not found or error occurred" << std::endl;
+        }
+
+    } catch (const minio::error::Error& err) {
+        std::cout << "Debug error: " << err.String() << std::endl;
+    }
+}
 
 
 

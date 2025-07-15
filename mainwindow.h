@@ -36,5 +36,7 @@ private slots:
     void on_btnQuit_clicked();
     void on_btnViewDocs_clicked();
     void on_btnExportUsers_clicked();
+    void on_btnDownloadUserTemplate_clicked();
+    void on_btnImportUsers_clicked();
 };
 #endif // MAINWINDOW_H

@@ -313,4 +313,55 @@ void MainWindow::on_btnExportUsers_clicked()
     }
 }
 
+void MainWindow::on_btnDownloadUserTemplate_clicked()
+{
+    // 1. 选择保存路径
+    QString filePath = QFileDialog::getSaveFileName(
+        this,
+        "保存导入模板",
+        "users_export.csv",
+        "CSV文件 (*.csv);;所有文件 (*.*)"
+    );
+    if (filePath.isEmpty()) {
+        return;
+    }
+
+    // 2. 下载文件
+    std::string minioPath = "template/users_export.csv";
+    if (!g_cliHandler || !g_cliHandler->minioClient) {
+        QMessageBox::warning(this, "下载失败", "MinIO客户端未初始化");
+        return;
+    }
+    auto result = g_cliHandler->minioClient->getObject(minioPath, filePath.toStdString());
+    if (result.success && result.data.value()) {
+        QMessageBox::information(this, "下载成功", "模板已保存到:\n" + filePath);
+    } else {
+        QMessageBox::warning(this, "下载失败", "下载过程中出现错误: " + QString::fromStdString(result.message));
+    }
+}
+
+void MainWindow::on_btnImportUsers_clicked()
+{
+    // 1. 选择CSV文件
+    QString filePath = QFileDialog::getOpenFileName(
+        this,
+        "选择要导入的用户CSV文件",
+        "",
+        "CSV文件 (*.csv);;所有文件 (*.*)"
+    );
+    if (filePath.isEmpty()) {
+        return;
+    }
+
+    // 2. 调用导入命令
+    std::vector<std::string> args = {"import-users-excel", filePath.toStdString()};
+    bool ok = g_cliHandler->handleImportUsersExcel(args);
+    if (ok) {
+        QMessageBox::information(this, "导入成功", "用户数据导入成功！");
+        updateUserList();
+    } else {
+        QMessageBox::warning(this, "导入失败", "用户数据导入失败，请检查文件格式或内容。");
+    }
+}
+
 

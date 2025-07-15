@@ -242,6 +242,20 @@
            </property>
           </widget>
          </item>
+         <item>
+          <widget class="QPushButton" name="btnDownloadUserTemplate">
+           <property name="text">
+            <string>下载导入模板</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="btnImportUsers">
+           <property name="text">
+            <string>导入用户</string>
+           </property>
+          </widget>
+         </item>
         </layout>
        </item>
        <item>
