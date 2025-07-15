@@ -51,55 +51,7 @@ private:
     std::vector<std::string> parseCommand(const std::string& input);
     std::string joinArgs(const std::vector<std::string>& args, size_t start = 0);
 
-    // 输出格式化
-    void printTable(const std::vector<std::vector<std::string>>& data,
-                    const std::vector<std::string>& headers = {});
-    void printUser(const User& user);
-    void printDocument(const Document& doc);
-    void printSuccess(const std::string& message);
-    void printError(const std::string& message);
-    void printWarning(const std::string& message);
-    void printInfo(const std::string& message);
 
-    // 输入验证
-    bool validateInput(const std::string& input, const std::string& type);
-    std::string getPasswordInput(const std::string& prompt = "密码: ");
-    std::string getSecureInput(const std::string& prompt);
-
-    // 命令处理函数
-    bool handleHelp(const std::vector<std::string>& args);
-    bool handleExit(const std::vector<std::string>& args);
-    bool handleClear(const std::vector<std::string>& args);
-    bool handleHistory(const std::vector<std::string>& args); // 新增：history命令
-
-    // 用户认证命令
-    bool handleRegister(const std::vector<std::string>& args);
-    bool handleWhoami(const std::vector<std::string>& args);
-    bool handleChangePassword(const std::vector<std::string>& args);
-
-    // 用户管理命令
-    bool handleDeleteUser(const std::vector<std::string>& args);
-    bool handleSearchUsers(const std::vector<std::string>& args);
-    bool handleDeactivateUser(const std::vector<std::string>& args);
-    bool handleActivateUser(const std::vector<std::string>& args);
-    bool handleListSessions(const std::vector<std::string>& args);
-    bool handleClearSessions(const std::vector<std::string>& args);
-
-    // 文档管理命令
-    bool handleAddDocument(const std::vector<std::string>& args);
-    bool handleGetDocument(const std::vector<std::string>& args);
-    bool handleListDocuments(const std::vector<std::string>& args);
-    bool handleUpdateDocument(const std::vector<std::string>& args);
-    bool handleDeleteDocument(const std::vector<std::string>& args);
-    bool handleSearchDocuments(const std::vector<std::string>& args);
-
-    // 文件管理命令
-    bool handleUploadFile(const std::vector<std::string>& args);
-    bool handleDownloadFile(const std::vector<std::string>& args);
-    bool handleListFiles(const std::vector<std::string>& args);
-    bool handleDeleteFile(const std::vector<std::string>& args);
-    bool handleFileInfo(const std::vector<std::string>& args);
-    bool handleMinioStatus(const std::vector<std::string>& args);
 
 
     // Excel导入导出命令
@@ -171,4 +123,54 @@ public:
     bool handleLogout(const std::vector<std::string>& args);
     bool handleListUsers(const std::vector<std::string>& args);
     std::vector<User> getAllUsersForUI();
+    std::vector<User> getSearchedUsersForUI(const std::string& keyword);
+    bool handleRegister(const std::vector<std::string>& args);
+    // 输出格式化
+    void printTable(const std::vector<std::vector<std::string>>& data,
+                    const std::vector<std::string>& headers = {});
+    void printUser(const User& user);
+    void printDocument(const Document& doc);
+    void printSuccess(const std::string& message);
+    void printError(const std::string& message);
+    void printWarning(const std::string& message);
+    void printInfo(const std::string& message);
+
+    // 输入验证
+    bool validateInput(const std::string& input, const std::string& type);
+    std::string getPasswordInput(const std::string& prompt = "密码: ");
+    std::string getSecureInput(const std::string& prompt);
+
+    // 命令处理函数
+    bool handleHelp(const std::vector<std::string>& args);
+    bool handleExit(const std::vector<std::string>& args);
+    bool handleClear(const std::vector<std::string>& args);
+    bool handleHistory(const std::vector<std::string>& args); // 新增：history命令
+
+    // 用户认证命令
+    bool handleWhoami(const std::vector<std::string>& args);
+    bool handleChangePassword(const std::vector<std::string>& args);
+
+    // 用户管理命令
+    bool handleDeleteUser(const std::vector<std::string>& args);
+    bool handleSearchUsers(const std::vector<std::string>& args);
+    bool handleDeactivateUser(const std::vector<std::string>& args);
+    bool handleActivateUser(const std::vector<std::string>& args);
+    bool handleListSessions(const std::vector<std::string>& args);
+    bool handleClearSessions(const std::vector<std::string>& args);
+
+    // 文档管理命令
+    bool handleAddDocument(const std::vector<std::string>& args);
+    bool handleGetDocument(const std::vector<std::string>& args);
+    bool handleListDocuments(const std::vector<std::string>& args);
+    bool handleUpdateDocument(const std::vector<std::string>& args);
+    bool handleDeleteDocument(const std::vector<std::string>& args);
+    bool handleSearchDocuments(const std::vector<std::string>& args);
+
+    // 文件管理命令
+    bool handleUploadFile(const std::vector<std::string>& args);
+    bool handleDownloadFile(const std::vector<std::string>& args);
+    bool handleListFiles(const std::vector<std::string>& args);
+    bool handleDeleteFile(const std::vector<std::string>& args);
+    bool handleFileInfo(const std::vector<std::string>& args);
+    bool handleMinioStatus(const std::vector<std::string>& args);
 };

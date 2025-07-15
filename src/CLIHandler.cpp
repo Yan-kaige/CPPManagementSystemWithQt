@@ -1845,3 +1845,11 @@ std::vector<User> CLIHandler::getAllUsersForUI() {
     }
     return {};
 }
+
+std::vector<User> CLIHandler::getSearchedUsersForUI(const std::string& keyword) {
+    auto result = dbManager->searchUsers(keyword, 50);
+    if (result.success) {
+        return result.data.value();
+    }
+    return {};
+}

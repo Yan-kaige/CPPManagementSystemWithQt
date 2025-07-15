@@ -27,5 +27,9 @@ private slots:
     void on_btnLogin_clicked();
     void on_btnLogout_clicked();
     void updateUserList();
+    void on_btnSearchUser_clicked();
+    void on_btnRegisterUser_clicked();
+    void onDeleteUserClicked();
+    void onToggleUserActiveClicked();
 };
 #endif // MAINWINDOW_H

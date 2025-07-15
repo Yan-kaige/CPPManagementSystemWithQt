@@ -56,6 +56,56 @@
      </widget>
     </item>
     <item>
+     <widget class="QGroupBox" name="groupBoxRegister">
+      <property name="title">
+       <string>用户注册</string>
+      </property>
+      <layout class="QHBoxLayout" name="horizontalLayoutRegister">
+       <item>
+        <widget class="QLabel" name="labelRegisterUsername">
+         <property name="text">
+          <string>用户名：</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLineEdit" name="lineEditRegisterUsername"/>
+       </item>
+       <item>
+        <widget class="QLabel" name="labelRegisterPassword">
+         <property name="text">
+          <string>密码：</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLineEdit" name="lineEditRegisterPassword">
+         <property name="echoMode">
+          <enum>QLineEdit::Password</enum>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="labelRegisterEmail">
+         <property name="text">
+          <string>邮箱：</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLineEdit" name="lineEditRegisterEmail"/>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btnRegisterUser">
+         <property name="text">
+          <string>注册</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
      <widget class="QPushButton" name="btnLogout">
       <property name="text">
        <string>登出</string>
@@ -68,6 +118,24 @@
        <string>用户列表</string>
       </property>
       <layout class="QVBoxLayout" name="verticalLayoutUsers">
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayoutSearchUser">
+         <item>
+          <widget class="QLineEdit" name="lineEditSearchUser">
+           <property name="placeholderText">
+            <string>输入用户名或邮箱关键词</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="btnSearchUser">
+           <property name="text">
+            <string>搜索</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
        <item>
         <widget class="QTableWidget" name="tableWidgetUsers">
          <property name="columnCount">
