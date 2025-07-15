@@ -54,15 +54,7 @@ private:
 
 
 
-    // Excel导入导出命令
-    bool handleImportUsersExcel(const std::vector<std::string>& args);
-    bool handleImportDocumentsExcel(const std::vector<std::string>& args);
-    bool handleExportUsersExcel(const std::vector<std::string>& args);
-    bool handleExportDocumentsExcel(const std::vector<std::string>& args);
-    bool handleGenerateUserTemplate(const std::vector<std::string>& args);
-    bool handleGenerateDocumentTemplate(const std::vector<std::string>& args);
-    bool handlePreviewExcel(const std::vector<std::string>& args);
-    bool handleValidateExcel(const std::vector<std::string>& args);
+
 
     // 命令导出
     bool handleExportCommandsCSV(const std::vector<std::string>& args);
@@ -177,4 +169,17 @@ public:
     std::pair<bool, User> getCurrentUserForUI();
     std::vector<Document> getUserDocsForUI(int userId);
     std::vector<Document> getSearchedDocsForUI(int userId, const std::string& keyword);
+
+
+    // Excel导入导出命令
+    bool handleImportUsersExcel(const std::vector<std::string>& args);
+    bool handleImportDocumentsExcel(const std::vector<std::string>& args);
+    bool handleExportUsersExcel(const std::vector<std::string>& args);
+    bool handleExportDocumentsExcel(const std::vector<std::string>& args);
+    bool handleGenerateUserTemplate(const std::vector<std::string>& args);
+    bool handleGenerateDocumentTemplate(const std::vector<std::string>& args);
+    bool handlePreviewExcel(const std::vector<std::string>& args);
+    bool handleValidateExcel(const std::vector<std::string>& args);
+    bool handleExportDocsExcel(const std::string& username, const std::string& filePath);
+
 };

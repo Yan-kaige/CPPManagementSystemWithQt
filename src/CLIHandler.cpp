@@ -1882,3 +1882,45 @@ std::vector<Document> CLIHandler::getSearchedDocsForUI(int userId, const std::st
     }
     return filtered;
 }
+
+bool CLIHandler::handleExportDocsExcel(const std::string& username, const std::string& filePath) {
+    // 1. 查找用户
+    auto userResult = dbManager->getUserByUsername(username);
+    if (!userResult.success) {
+        printError("未找到用户: " + username);
+        return false;
+    }
+    int userId = userResult.data->id;
+
+    // 2. 获取该用户所有文档
+    auto docsResult = dbManager->getDocumentsByOwner(userId, 1000, 0);
+    if (!docsResult.success) {
+        printError("获取用户文档失败: " + docsResult.message);
+        return false;
+    }
+    const auto& docs = docsResult.data.value();
+
+    // 3. 写入CSV文件
+    std::ofstream file(filePath);
+    if (!file.is_open()) {
+        printError("无法创建文件: " + filePath);
+        return false;
+    }
+    // 写表头
+    file << "ID,标题,描述,文件路径,Minio键,所有者ID,创建时间,更新时间,文件大小,内容类型\n";
+    for (const auto& doc : docs) {
+        file << doc.id << ","
+             << '"' << doc.title << '"' << ","
+             << '"' << doc.description << '"' << ","
+             << '"' << doc.file_path << '"' << ","
+             << '"' << doc.minio_key << '"' << ","
+             << doc.owner_id << ","
+             << '"' << Utils::formatTimestamp(doc.created_at) << '"' << ","
+             << '"' << Utils::formatTimestamp(doc.updated_at) << '"' << ","
+             << doc.file_size << ","
+             << '"' << doc.content_type << '"' << "\n";
+    }
+    file.close();
+    printSuccess("文档导出成功: " + filePath);
+    return true;
+}

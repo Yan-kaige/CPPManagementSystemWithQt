@@ -6,6 +6,7 @@
 #include <QPushButton>
 #include <QApplication>
 #include "DocListDialog.h"
+#include <QFileDialog>
 
 extern CLIHandler* g_cliHandler; // 假设有全局CLIHandler指针
 
@@ -297,6 +298,19 @@ void MainWindow::on_btnViewDocs_clicked()
     std::vector<Document> docs = g_cliHandler->getUserDocsForUI(userId);
     DocListDialog dlg(docs, this);
     dlg.exec();
+}
+
+void MainWindow::on_btnExportUsers_clicked()
+{
+    QString filePath = QFileDialog::getSaveFileName(this, "导出用户", "users_export.csv", "Excel Files (*.xlsx);;CSV Files (*.csv);;All Files (*)");
+    if (filePath.isEmpty()) return;
+    std::vector<std::string> args = { "export-users-excel", filePath.toStdString() };
+    bool ok = g_cliHandler->handleExportUsersExcel(args);
+    if (ok) {
+        QMessageBox::information(this, "导出用户", "导出成功！");
+    } else {
+        QMessageBox::warning(this, "导出用户", "导出失败，请检查路径或权限");
+    }
 }
 
 

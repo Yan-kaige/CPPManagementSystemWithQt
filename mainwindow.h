@@ -35,5 +35,6 @@ private slots:
     void on_btnChangePassword_clicked();
     void on_btnQuit_clicked();
     void on_btnViewDocs_clicked();
+    void on_btnExportUsers_clicked();
 };
 #endif // MAINWINDOW_H
