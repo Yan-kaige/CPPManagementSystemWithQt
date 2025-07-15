@@ -342,36 +342,6 @@ Result<bool> MinioClient::objectExists(const std::string& objectName) {
 }
 
 
-// 调试用的函数：详细检查对象状态
-void MinioClient::debugObjectInfo(const std::string& objectName) {
-    try {
-        std::lock_guard<std::mutex> lock(clientMutex);
-
-        minio::s3::StatObjectArgs args;
-        args.bucket = bucket;
-        args.object = objectName;
-
-        minio::s3::StatObjectResponse resp = client->StatObject(args);
-
-        if (resp) {
-            std::cout << "=== Object Info ===" << std::endl;
-            std::cout << "Bucket: " << bucket << std::endl;
-            std::cout << "Object: " << objectName << std::endl;
-            std::cout << "Size: " << resp.size << " bytes" << std::endl;
-            std::cout << "ETag: " << resp.etag << std::endl;
-            std::cout << "Last Modified: " << resp.last_modified << std::endl;
-            // std::cout << "Content Type: " << resp.content_type << std::endl;
-            std::cout << "===================" << std::endl;
-        } else {
-            std::cout << "Object not found or error occurred" << std::endl;
-        }
-
-    } catch (const minio::error::Error& err) {
-        std::cout << "Debug error: " << err.String() << std::endl;
-    }
-}
-
-
 
 minio::error::Error MinioClient::handleMinioError(const minio::error::Error& err) {
     return err;
