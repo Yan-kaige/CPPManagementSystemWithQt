@@ -6,7 +6,7 @@
 #include <iomanip>
 #include <chrono>
 #include <miniocpp/credentials.h>
-
+#include <QDebug>
 MinioClient::MinioClient()
         : initialized(false), useSSL(false) {
     // minio-cpp client will be initialized when needed
@@ -202,7 +202,7 @@ Result<bool> MinioClient::getObject(const std::string& objectName, const std::st
         statArgs.bucket = bucket;
         statArgs.object = objectName;
 
-        std::cout << "Checking object: " << objectName << std::endl;
+        qDebug() << QString::fromUtf8("Checking object: " + objectName);
 
         minio::s3::StatObjectResponse statResp = client->StatObject(statArgs);
 
@@ -210,7 +210,7 @@ Result<bool> MinioClient::getObject(const std::string& objectName, const std::st
             return Result<bool>::Error("Object not found: " + objectName);
         }
 
-        std::cout << "Object found. Size: " << statResp.size << " bytes" << std::endl;
+        qDebug() << QString::fromUtf8("Object found. Size: " + std::to_string(statResp.size) + " bytes");
 
         if (statResp.size == 0) {
             return Result<bool>::Error("Object is empty on server: " + objectName);
@@ -237,13 +237,13 @@ Result<bool> MinioClient::getObject(const std::string& objectName, const std::st
 
             // 显示进度（可选）
             if (totalBytes % 1024 == 0 || args.datachunk.size() < 1024) {
-                std::cout << "Downloaded: " << totalBytes << " bytes\r" << std::flush;
+                qDebug() << QString::fromUtf8("Downloaded: " + std::to_string(totalBytes) + " bytes");
             }
 
             return true; // 返回 true 继续接收数据
         };
 
-        std::cout << "Starting download..." << std::endl;
+        qDebug() << QString::fromUtf8("Starting download...");
 
         // 执行下载
         minio::s3::GetObjectResponse resp = client->GetObject(args);
@@ -252,30 +252,29 @@ Result<bool> MinioClient::getObject(const std::string& objectName, const std::st
 
         // 检查响应
         if (resp) {
-            std::cout << std::endl << "Download successful! Total bytes: " << totalBytes << std::endl;
+            qDebug() << QString::fromUtf8("Download successful! Total bytes: " + std::to_string(totalBytes));
 
             // 验证文件大小
             if (totalBytes == statResp.size) {
-                std::cout << "File size verification passed" << std::endl;
+                qDebug() << QString::fromUtf8("File size verification passed");
                 return Result<bool>::Success(true);
             } else {
-                std::cout << "Warning: File size mismatch. Expected: " << statResp.size
-                          << ", Got: " << totalBytes << std::endl;
+                qDebug() << QString::fromUtf8("Warning: File size mismatch. Expected: " + std::to_string(statResp.size) + ", Got: " + std::to_string(totalBytes));
                 return Result<bool>::Success(true); // 仍然认为成功，可能是部分内容
             }
         } else {
-            std::cout << std::endl << "Download failed: " << resp.Error().String() << std::endl;
+            qDebug() << QString::fromUtf8("Download failed: " + resp.Error().String());
             return Result<bool>::Error("Download failed: " + resp.Error().String());
         }
 
     } catch (const minio::error::Error& err) {
-        std::cout << "MinIO Error: " << err.String() << std::endl;
+        qDebug() << QString::fromUtf8("MinIO Error: " + err.String());
         return Result<bool>::Error("Download failed: " + std::string(err.String()));
     } catch (const std::exception& e) {
-        std::cout << "Standard Exception: " << e.what() << std::endl;
+        qDebug() << QString::fromUtf8("Standard Exception: " + std::string(e.what()));
         return Result<bool>::Error("Download failed: " + std::string(e.what()));
     } catch (...) {
-        std::cout << "Unknown exception occurred" << std::endl;
+        qDebug() << QString::fromUtf8("Unknown exception occurred");
         return Result<bool>::Error("Download failed: Unknown exception");
     }
 }

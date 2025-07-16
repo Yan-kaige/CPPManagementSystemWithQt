@@ -7,7 +7,7 @@
 #include <atomic>
 #include "linenoise.h"
 #include "Common.h"
-
+#include <QDebug>
 CLIHandler* CLIHandler::instance = nullptr;
 
 CLIHandler::CLIHandler()
@@ -90,11 +90,11 @@ bool CLIHandler::initialize() {
     }
     
     // 初始化MinioClient
-//    std::cout << "正在初始化MinIO客户端..." << std::endl;
-//    std::cout << "  Endpoint: " << config->getMinioEndpoint() << std::endl;
-//    std::cout << "  Access Key: " << config->getMinioAccessKey() << std::endl;
-//    std::cout << "  Bucket: " << config->getMinioBucket() << std::endl;
-//    std::cout << "  Secure: " << (config->getMinioSecure() ? "true" : "false") << std::endl;
+//    qDebug() << "正在初始化MinIO客户端...\n";
+//    qDebug() << "  Endpoint: " << config->getMinioEndpoint() +"\n";
+//    qDebug() << "  Access Key: " << config->getMinioAccessKey() +"\n";
+//    qDebug() << "  Bucket: " << config->getMinioBucket() +"\n";
+//    qDebug() << "  Secure: " << (config->getMinioSecure() ? "true" : "false") +"\n";
     
     bool minioOk = minioClient->initialize(
         config->getMinioEndpoint(),
@@ -150,7 +150,7 @@ void CLIHandler::shutdown() {
 }
 
 void CLIHandler::showPrompt() {
-    std::cout << prompt;
+    qDebug() << prompt;
 }
 
 std::string CLIHandler::getInput() {
@@ -538,24 +538,23 @@ void CLIHandler::addToHistory(const std::string& command) {
 void CLIHandler::appendToHistoryFile(const std::string& commandLine) {
     std::ofstream file("command_history.log", std::ios::app);
     if (file.is_open()) {
-        file << commandLine << std::endl;
+        file << commandLine +"\n";
     }
 }
 
 void CLIHandler::printWarning(const std::string& message) {
 #ifdef _WIN32
-    // Windows 控制台默认不支持ANSI颜色，简单输出
-    std::cout << "[WARNING] " << message << std::endl;
+    qDebug() << QString::fromUtf8("[WARNING] " + message);
 #else
-    std::cout << "\033[33m[WARNING]\033[0m " << message << std::endl;
+    qDebug() << QString::fromUtf8("\033[33m[WARNING]\033[0m " + message);
 #endif
 }
 
 void CLIHandler::printError(const std::string& message) {
 #ifdef _WIN32
-    std::cerr << "[ERROR] " << message << std::endl;
+    std::cerr << "[ERROR] " << message +"\n";
 #else
-    std::cerr << "\033[31m[ERROR]\033[0m " << message << std::endl;
+    std::cerr << "\033[31m[ERROR]\033[0m " << message +"\n";
 #endif
 }
 
@@ -568,7 +567,7 @@ std::string CLIHandler::getVersion() {
 }
 
 void CLIHandler::showWelcome() {
-    std::cout << "欢迎使用 CLI 管理系统 v" << getVersion() << std::endl;
+    qDebug() << QString::fromUtf8("欢迎使用 CLI 管理系统 v" + getVersion());
 }
 
 std::string CLIHandler::getPrompt() const {
@@ -603,17 +602,17 @@ bool CLIHandler::handleRegister(const std::vector<std::string>& args) {
 
 void CLIHandler::printSuccess(const std::string& message) {
 #ifdef _WIN32
-    std::cout << "[SUCCESS] " << message << std::endl;
+    qDebug() << QString::fromUtf8("[SUCCESS] " + message);
 #else
-    std::cout << "\033[32m[SUCCESS]\033[0m " << message << std::endl;
+    qDebug() << QString::fromUtf8("\033[32m[SUCCESS]\033[0m " + message);
 #endif
 }
 
 void CLIHandler::printInfo(const std::string& message) {
 #ifdef _WIN32
-    std::cout << "[INFO] " << message << std::endl;
+    qDebug() << QString::fromUtf8("[INFO] " + message);
 #else
-    std::cout << "\033[36m[INFO]\033[0m " << message << std::endl;
+    qDebug() << QString::fromUtf8("\033[36m[INFO]\033[0m " + message);
 #endif
 }
 
@@ -657,15 +656,13 @@ bool CLIHandler::handleWhoami(const std::vector<std::string>& args) {
         printError("当前未登录");
         return false;
     }
-    
     auto result = authManager->getCurrentUser();
     if (result.success) {
         User user = result.data.value();
-        std::cout << "当前用户信息:" << std::endl;
-        std::cout << "  ID: " << user.id << std::endl;
-        std::cout << "  用户名: " << user.username << std::endl;
-        std::cout << "  邮箱: " << user.email << std::endl;
-        std::cout << "  状态: " << (user.is_active ? "激活" : "禁用") << std::endl;
+        qDebug() << QString::fromUtf8("当前用户信息: ID: " + std::to_string(user.id)
+            + " 用户名: " + user.username
+            + " 邮箱: " + user.email
+            + " 状态: " + (user.is_active ? "激活" : "禁用"));
         return true;
     } else {
         printError("获取用户信息失败: " + result.message);
@@ -680,27 +677,26 @@ bool CLIHandler::handleHelp(const std::vector<std::string>& args) {
         auto it = commands.find(commandName);
         if (it != commands.end()) {
             const Command& cmd = it->second;
-            std::cout << std::endl;
-            std::cout << "=== " << cmd.name << " 命令帮助 ===" << std::endl;
-            std::cout << "命令名  : " << cmd.name << std::endl;
-            std::cout << "描述    : " << cmd.description << std::endl;
-            std::cout << "用法    : " << cmd.usage << std::endl;
+            qDebug() << "\n=== " << cmd.name << " 命令帮助 ===\n";
+            qDebug() << "命令名  : " << cmd.name +"\n";
+            qDebug() << "描述    : " << cmd.description +"\n";
+            qDebug() << "用法    : " << cmd.usage +"\n";
             if (!cmd.examples.empty()) {
-                std::cout << "示例    :" << std::endl;
+                qDebug() << "示例    :\n";
                 for (const auto& example : cmd.examples) {
-                    std::cout << "  " << example << std::endl;
+                    qDebug() << "  " << example +"\n";
                 }
             }
             if (!cmd.aliases.empty()) {
-                std::cout << "别名    : ";
+                qDebug() << "别名    : ";
                 for (size_t i = 0; i < cmd.aliases.size(); ++i) {
-                    if (i > 0) std::cout << ", ";
-                    std::cout << cmd.aliases[i];
+                    if (i > 0) qDebug() << ", ";
+                    qDebug() << cmd.aliases[i];
                 }
-                std::cout << std::endl;
+                qDebug() <<"\n";
             }
-            std::cout << "需要登录: " << (cmd.requiresAuth ? "是" : "否") << std::endl;
-            std::cout << "================================" << std::endl;
+            qDebug() << "需要登录: " << (cmd.requiresAuth ? "是" : "否");
+            qDebug() << "================================\n";
             return true;
         } else {
             printError("未知命令: " + commandName + "，请输入 help 查看所有命令");
@@ -708,72 +704,64 @@ bool CLIHandler::handleHelp(const std::vector<std::string>& args) {
         }
     } else {
         // 显示所有命令的帮助
-        std::cout << "\n=== C++ 管理系统命令帮助 ===" << std::endl;
-        std::cout << "版本: " << getVersion() << std::endl;
-        std::cout << "输入 'help <命令名>' 查看特定命令的详细帮助\n" << std::endl;
-        
-        // 按类别分组显示命令
-        std::cout << "【基础命令】" << std::endl;
-        std::cout << "  help     - 显示帮助信息" << std::endl;
-        std::cout << "  exit     - 退出程序" << std::endl;
-        std::cout << "  whoami   - 显示当前用户信息" << std::endl;
-        
-        std::cout << "\n【用户认证】" << std::endl;
-        std::cout << "  register - 用户注册" << std::endl;
-        std::cout << "  login    - 用户登录" << std::endl;
-        std::cout << "  logout   - 用户登出" << std::endl;
-        std::cout << "  changepass - 修改密码" << std::endl;
-        
-        std::cout << "\n【用户管理】" << std::endl;
-        std::cout << "  users    - 列出所有用户" << std::endl;
-        std::cout << "  search   - 搜索用户" << std::endl;
-        std::cout << "  activate - 激活用户" << std::endl;
-        std::cout << "  deactivate - 禁用用户" << std::endl;
-        std::cout << "  deleteuser - 删除用户" << std::endl;
-        std::cout << "  sessions - 显示活跃会话" << std::endl;
-        std::cout << "  clearsessions - 清除所有会话" << std::endl;
-        
-        std::cout << "\n【文档管理】" << std::endl;
-        std::cout << "  adddoc   - 添加文档" << std::endl;
-        std::cout << "  getdoc   - 获取文档信息" << std::endl;
-        std::cout << "  listdocs - 列出文档" << std::endl;
-        std::cout << "  updatedoc - 更新文档信息" << std::endl;
-        std::cout << "  deletedoc - 删除文档" << std::endl;
-        std::cout << "  searchdocs - 搜索文档" << std::endl;
-        
-        std::cout << "\n【文件管理】" << std::endl;
-        std::cout << "  upload   - 上传文件到MinIO" << std::endl;
-        std::cout << "  download - 从MinIO下载文件" << std::endl;
-        std::cout << "  listfiles - 列出MinIO中的文件" << std::endl;
-        std::cout << "  deletefile - 删除MinIO中的文件" << std::endl;
-        std::cout << "  fileinfo - 获取文件信息" << std::endl;
-        std::cout << "  minio-status - 检查MinIO连接状态" << std::endl;
-        
-        std::cout << "\n【Excel导入导出】" << std::endl;
-        std::cout << "  import-users-excel - 从Excel导入用户数据" << std::endl;
-        std::cout << "  export-users-excel - 导出用户数据到Excel" << std::endl;
-        std::cout << "  import-docs-excel - 从Excel导入文档数据" << std::endl;
-        std::cout << "  export-docs-excel - 导出文档数据到Excel" << std::endl;
-        std::cout << "  gen-user-template - 生成用户导入模板" << std::endl;
-        std::cout << "  gen-doc-template - 生成文档导入模板" << std::endl;
-        std::cout << "  preview-excel - 预览Excel文件内容" << std::endl;
-        std::cout << "  validate-excel - 验证Excel文件格式" << std::endl;
-        
-        std::cout << "\n【快捷别名】" << std::endl;
-        std::cout << "  h, ?     - help 的别名" << std::endl;
-        std::cout << "  q, quit  - exit 的别名" << std::endl;
-        
-        std::cout << "\n=== 使用示例 ===" << std::endl;
-        std::cout << "注册新用户: register alice 123456 alice@example.com" << std::endl;
-        std::cout << "登录系统:   login alice 123456" << std::endl;
-        std::cout << "查看帮助:   help login" << std::endl;
-        std::cout << "退出程序:   exit" << std::endl;
-        std::cout << "生成模板:   gen-user-template users.xlsx" << std::endl;
-        std::cout << "导入用户:   import-users-excel users.xlsx" << std::endl;
-        std::cout << "导出用户:   export-users-excel users_export.xlsx" << std::endl;
-        std::cout << "预览文件:   preview-excel data.xlsx 10" << std::endl;
-        std::cout << "================================" << std::endl;
-        
+        std::string helpText;
+        helpText += "\n=== C++ 管理系统命令帮助 ===\n";
+        helpText += "版本: " + getVersion() + "\n";
+        helpText += "输入 'help <命令名>' 查看特定命令的详细帮助\n\n";
+        helpText += "【基础命令】\n";
+        helpText += "  help     - 显示帮助信息\n";
+        helpText += "  exit     - 退出程序\n";
+        helpText += "  whoami   - 显示当前用户信息\n";
+        helpText += "\n【用户认证】\n";
+        helpText += "  register - 用户注册\n";
+        helpText += "  login    - 用户登录\n";
+        helpText += "  logout   - 用户登出\n";
+        helpText += "  changepass - 修改密码\n";
+        helpText += "\n【用户管理】\n";
+        helpText += "  users    - 列出所有用户\n";
+        helpText += "  search   - 搜索用户\n";
+        helpText += "  activate - 激活用户\n";
+        helpText += "  deactivate - 禁用用户\n";
+        helpText += "  deleteuser - 删除用户\n";
+        helpText += "  sessions - 显示活跃会话\n";
+        helpText += "  clearsessions - 清除所有会话\n";
+        helpText += "\n【文档管理】\n";
+        helpText += "  adddoc   - 添加文档\n";
+        helpText += "  getdoc   - 获取文档信息\n";
+        helpText += "  listdocs - 列出文档\n";
+        helpText += "  updatedoc - 更新文档信息\n";
+        helpText += "  deletedoc - 删除文档\n";
+        helpText += "  searchdocs - 搜索文档\n";
+        helpText += "\n【文件管理】\n";
+        helpText += "  upload   - 上传文件到MinIO\n";
+        helpText += "  download - 从MinIO下载文件\n";
+        helpText += "  listfiles - 列出MinIO中的文件\n";
+        helpText += "  deletefile - 删除MinIO中的文件\n";
+        helpText += "  fileinfo - 获取文件信息\n";
+        helpText += "  minio-status - 检查MinIO连接状态\n";
+        helpText += "\n【Excel导入导出】\n";
+        helpText += "  import-users-excel - 从Excel导入用户数据\n";
+        helpText += "  export-users-excel - 导出用户数据到Excel\n";
+        helpText += "  import-docs-excel - 从Excel导入文档数据\n";
+        helpText += "  export-docs-excel - 导出文档数据到Excel\n";
+        helpText += "  gen-user-template - 生成用户导入模板\n";
+        helpText += "  gen-doc-template - 生成文档导入模板\n";
+        helpText += "  preview-excel - 预览Excel文件内容\n";
+        helpText += "  validate-excel - 验证Excel文件格式\n";
+        helpText += "\n【快捷别名】\n";
+        helpText += "  h, ?     - help 的别名\n";
+        helpText += "  q, quit  - exit 的别名\n";
+        helpText += "\n=== 使用示例 ===\n";
+        helpText += "注册新用户: register alice 123456 alice@example.com\n";
+        helpText += "登录系统:   login alice 123456\n";
+        helpText += "查看帮助:   help login\n";
+        helpText += "退出程序:   exit\n";
+        helpText += "生成模板:   gen-user-template users.xlsx\n";
+        helpText += "导入用户:   import-users-excel users.xlsx\n";
+        helpText += "导出用户:   export-users-excel users_export.xlsx\n";
+        helpText += "预览文件:   preview-excel data.xlsx 10\n";
+        helpText += "================================\n";
+        qDebug() << QString::fromUtf8(helpText);
         return true;
     }
 }
@@ -811,15 +799,15 @@ bool CLIHandler::handleListUsers(const std::vector<std::string>& args) {
     auto result = authManager->getAllUsers();
     if (result.success) {
         std::vector<User> users = result.data.value();
-        std::cout << "用户列表 (共 " << users.size() << " 个用户):" << std::endl;
-        std::cout << "ID\t用户名\t\t邮箱\t\t\t状态" << std::endl;
-        std::cout << "----------------------------------------" << std::endl;
+        qDebug() << QString::fromUtf8("用户列表 (共 " + std::to_string(users.size()) + " 个用户):");
+        qDebug() << "ID\t用户名\t\t邮箱\t\t\t状态 \n";
+        qDebug() << "----------------------------------------\n";
         
         int count = 0;
         for (const auto& user : users) {
             if (count >= limit) break;
-            std::cout << user.id << "\t" << user.username << "\t\t" 
-                      << user.email << "\t\t" << (user.is_active ? "激活" : "禁用") << std::endl;
+            qDebug() << user.id << "\t" << user.username << "\t\t" 
+                      << user.email << "\t\t" << (user.is_active ? "激活" : "禁用");
             count++;
         }
         return true;
@@ -839,13 +827,13 @@ bool CLIHandler::handleSearchUsers(const std::vector<std::string>& args) {
     auto result = dbManager->searchUsers(query, 20);
     if (result.success) {
         std::vector<User> users = result.data.value();
-        std::cout << "搜索结果 (共 " << users.size() << " 个用户):" << std::endl;
-        std::cout << "ID\t用户名\t\t邮箱\t\t\t状态" << std::endl;
-        std::cout << "----------------------------------------" << std::endl;
+        qDebug() << QString::fromUtf8("搜索结果 (共 " + std::to_string(users.size()) + " 个用户):");
+        qDebug() << "ID\t用户名\t\t邮箱\t\t\t状态\n";
+        qDebug() << "----------------------------------------\n";
         
         for (const auto& user : users) {
-            std::cout << user.id << "\t" << user.username << "\t\t" 
-                      << user.email << "\t\t" << (user.is_active ? "激活" : "禁用") << std::endl;
+            qDebug() << user.id << "\t" << user.username << "\t\t" 
+                      << user.email << "\t\t" << (user.is_active ? "激活" : "禁用") ;
         }
         return true;
     } else {
@@ -1078,14 +1066,14 @@ bool CLIHandler::handleListDocuments(const std::vector<std::string>& args) {
     auto result = dbManager->getDocumentsByOwner(currentUser.id, limit, offset);
     if (result.success) {
         std::vector<Document> docs = result.data.value();
-        std::cout << "文档列表 (共 " << docs.size() << " 个文档):" << std::endl;
-        std::cout << "ID\t标题\t\t\t大小\t\t创建时间" << std::endl;
-        std::cout << "------------------------------------------------" << std::endl;
+        qDebug() << QString::fromUtf8("文档列表 (共 " + std::to_string(docs.size()) + " 个文档):");
+        qDebug() << "ID\t标题\t\t\t大小\t\t创建时间\n";
+        qDebug() << "------------------------------------------------\n";
         
         for (const auto& doc : docs) {
-            std::cout << doc.id << "\t" << doc.title.substr(0, 15) << "\t\t" 
+            qDebug() << doc.id << "\t" << doc.title.substr(0, 15) << "\t\t" 
                       << doc.file_size << " bytes\t" 
-                      << Utils::formatTimestamp(doc.created_at) << std::endl;
+                      << Utils::formatTimestamp(doc.created_at) +"\n";
         }
         return true;
     } else {
@@ -1188,14 +1176,14 @@ bool CLIHandler::handleSearchDocuments(const std::vector<std::string>& args) {
     auto result = dbManager->searchDocuments(query, 20);
     if (result.success) {
         std::vector<Document> docs = result.data.value();
-        std::cout << "搜索结果 (共 " << docs.size() << " 个文档):" << std::endl;
-        std::cout << "ID\t标题\t\t\t大小\t\t创建时间" << std::endl;
-        std::cout << "------------------------------------------------" << std::endl;
+        qDebug() << QString::fromUtf8("搜索结果 (共 " + std::to_string(docs.size()) + " 个文档):");
+        qDebug() << "ID\t标题\t\t\t大小\t\t创建时间\n";
+        qDebug() << "------------------------------------------------\n";
         
         for (const auto& doc : docs) {
-            std::cout << doc.id << "\t" << doc.title.substr(0, 15) << "\t\t" 
+            qDebug() << doc.id << "\t" << doc.title.substr(0, 15) << "\t\t" 
                       << doc.file_size << " bytes\t" 
-                      << Utils::formatTimestamp(doc.created_at) << std::endl;
+                      << Utils::formatTimestamp(doc.created_at) +"\n";
         }
         return true;
     } else {
@@ -1278,12 +1266,12 @@ bool CLIHandler::handleListFiles(const std::vector<std::string>& args) {
     auto result = minioClient->listObjects(prefix);
     if (result.success) {
         std::vector<std::string> objects = result.data.value();
-        std::cout << "文件列表 (共 " << objects.size() << " 个文件):" << std::endl;
-        std::cout << "文件名" << std::endl;
-        std::cout << "----------------" << std::endl;
+        qDebug() << QString::fromUtf8("文件列表 (共 " + std::to_string(objects.size()) + " 个文件):");
+        qDebug() << "文件名\n";
+        qDebug() << "----------------\n";
         
         for (const auto& object : objects) {
-            std::cout << object << std::endl;
+            qDebug() << object +"\n";
         }
         return true;
     } else {
@@ -1340,29 +1328,28 @@ bool CLIHandler::handleFileInfo(const std::vector<std::string>& args) {
 }
 
 void CLIHandler::printDocument(const Document& doc) {
-    std::cout << "\n=== 文档信息 ===" << std::endl;
-    std::cout << "ID: " << doc.id << std::endl;
-    std::cout << "标题: " << doc.title << std::endl;
-    std::cout << "描述: " << doc.description << std::endl;
-    std::cout << "文件路径: " << doc.file_path << std::endl;
-    std::cout << "MinIO键: " << doc.minio_key << std::endl;
-    std::cout << "所有者ID: " << doc.owner_id << std::endl;
-    std::cout << "文件大小: " << doc.file_size << " bytes" << std::endl;
-    std::cout << "内容类型: " << doc.content_type << std::endl;
-    std::cout << "创建时间: " << Utils::formatTimestamp(doc.created_at) << std::endl;
-    std::cout << "更新时间: " << Utils::formatTimestamp(doc.updated_at) << std::endl;
-    std::cout << "==================" << std::endl;
+    qDebug() << QString::fromUtf8("\n=== 文档信息 === ID: " + std::to_string(doc.id)
+        + " 标题: " + doc.title
+        + " 描述: " + doc.description
+        + " 文件路径: " + doc.file_path
+        + " MinIO键: " + doc.minio_key
+        + " 所有者ID: " + std::to_string(doc.owner_id)
+        + " 文件大小: " + std::to_string(doc.file_size) + " bytes"
+        + " 内容类型: " + doc.content_type
+        + " 创建时间: " + Utils::formatTimestamp(doc.created_at)
+        + " 更新时间: " + Utils::formatTimestamp(doc.updated_at)
+        + "\n==================");
 }
 
 bool CLIHandler::handleMinioStatus(const std::vector<std::string>& args) {
-    std::cout << "\n=== MinIO 状态检查 ===" << std::endl;
+    qDebug() << "\n=== MinIO 状态检查 ===\n";
     
     if (!minioClient) {
         printError("MinIO客户端未创建");
         return false;
     }
     
-    std::cout << "MinIO客户端初始化状态: " << (minioClient->isInitialized() ? "已初始化" : "未初始化") << std::endl;
+    qDebug() << "MinIO客户端初始化状态: " << (minioClient->isInitialized() ? "已初始化" : "未初始化");
     
     if (!minioClient->isInitialized()) {
         printError("MinIO客户端未初始化，无法检查状态");
@@ -1373,7 +1360,7 @@ bool CLIHandler::handleMinioStatus(const std::vector<std::string>& args) {
     auto bucketExists = minioClient->bucketExists();
     if (bucketExists.success) {
         printSuccess("Bucket检查成功");
-        std::cout << "当前Bucket存在: " << (bucketExists.data.value() ? "是" : "否") << std::endl;
+        qDebug() << "当前Bucket存在: " << (bucketExists.data.value() ? "是" : "否");
     } else {
         printError("Bucket检查失败: " + bucketExists.message);
     }
@@ -1382,9 +1369,9 @@ bool CLIHandler::handleMinioStatus(const std::vector<std::string>& args) {
     auto listBuckets = minioClient->listBuckets();
     if (listBuckets.success) {
         std::vector<std::string> buckets = listBuckets.data.value();
-        std::cout << "所有Bucket列表 (共 " << buckets.size() << " 个):" << std::endl;
+        qDebug() << QString::fromUtf8("所有Bucket列表 (共 " + std::to_string(buckets.size()) + " 个):");
         for (const auto& bucket : buckets) {
-            std::cout << "  - " << bucket << std::endl;
+            qDebug() << "  - " << bucket +"\n";
         }
     } else {
         printError("获取Bucket列表失败: " + listBuckets.message);
@@ -1394,15 +1381,15 @@ bool CLIHandler::handleMinioStatus(const std::vector<std::string>& args) {
     auto listObjects = minioClient->listObjects();
     if (listObjects.success) {
         std::vector<std::string> objects = listObjects.data.value();
-        std::cout << "当前Bucket中的对象 (共 " << objects.size() << " 个):" << std::endl;
+        qDebug() << QString::fromUtf8("当前Bucket中的对象 (共 " + std::to_string(objects.size()) + " 个):");
         for (const auto& object : objects) {
-            std::cout << "  - " << object << std::endl;
+            qDebug() << "  - " << object +"\n";
         }
     } else {
         printError("获取对象列表失败: " + listObjects.message);
     }
     
-    std::cout << "=========================" << std::endl;
+    qDebug() << "=========================\n";
     return true;
 }
 
@@ -1435,9 +1422,9 @@ bool CLIHandler::handleImportUsersExcel(const std::vector<std::string>& args) {
     importExportManager->setProgressCallback([](int current, int total, const std::string& status) {
         if (total > 0) {
             int percentage = (current * 100) / total;
-            std::cout << "\r进度: " << percentage << "% (" << current << "/" << total << ") " << status;
+            qDebug() << "\r进度: " << percentage << "% (" << current << "/" << total << ") " << status;
             if (current == total) {
-                std::cout << std::endl;
+                qDebug() <<"\n";
             }
         }
     });
@@ -1447,15 +1434,15 @@ bool CLIHandler::handleImportUsersExcel(const std::vector<std::string>& args) {
     if (result.success) {
         ImportResult importResult = result.data.value();
         printSuccess("用户数据导入完成！");
-        std::cout << "总记录数: " << importResult.totalRecords << std::endl;
-        std::cout << "成功导入: " << importResult.successfulImports << std::endl;
-        std::cout << "导入失败: " << importResult.failedImports << std::endl;
-        std::cout << "耗时: " << importResult.duration.count() << "ms" << std::endl;
+        qDebug() << QString::fromUtf8("总记录数: " + std::to_string(importResult.totalRecords));
+        qDebug() << QString::fromUtf8("成功导入: " + std::to_string(importResult.successfulImports));
+        qDebug() << QString::fromUtf8("导入失败: " + std::to_string(importResult.failedImports));
+        qDebug() << QString::fromUtf8("耗时: " + std::to_string(importResult.duration.count()) + "ms");
         // 新增：无论成功与否都打印错误
         if (!importResult.errors.empty()) {
             printWarning("导入过程中的错误:");
             for (const auto& error : importResult.errors) {
-                std::cout << "  - " << error << std::endl;
+                qDebug() << QString::fromUtf8("  - " + error) +"\n";
             }
         }
         return true;
@@ -1465,7 +1452,7 @@ bool CLIHandler::handleImportUsersExcel(const std::vector<std::string>& args) {
         if (result.data && !result.data->errors.empty()) {
             printWarning("导入过程中的错误:");
             for (const auto& error : result.data->errors) {
-                std::cout << "  - " << error << std::endl;
+                qDebug() << QString::fromUtf8("  - " + error) +"\n";
             }
         }
         return false;
@@ -1495,10 +1482,10 @@ bool CLIHandler::handleExportUsersExcel(const std::vector<std::string>& args) {
     if (result.success) {
         ExportResult exportResult = result.data.value();
         printSuccess("用户数据导出完成！");
-        std::cout << "导出记录数: " << exportResult.totalRecords << std::endl;
-        std::cout << "文件大小: " << exportResult.fileSize << " bytes" << std::endl;
-        std::cout << "文件路径: " << exportResult.filePath << std::endl;
-        std::cout << "耗时: " << exportResult.duration.count() << "ms" << std::endl;
+        qDebug() << "导出记录数: " << exportResult.totalRecords +"\n";
+        qDebug() << "文件大小: " << exportResult.fileSize << " bytes\n";
+        qDebug() << "文件路径: " << exportResult.filePath +"\n";
+        qDebug() << "耗时: " << exportResult.duration.count() << "ms\n";
         return true;
     } else {
         printError("用户数据导出失败: " + result.message);
@@ -1533,9 +1520,9 @@ bool CLIHandler::handleImportDocumentsExcel(const std::vector<std::string>& args
     importExportManager->setProgressCallback([](int current, int total, const std::string& status) {
         if (total > 0) {
             int percentage = (current * 100) / total;
-            std::cout << "\r进度: " << percentage << "% (" << current << "/" << total << ") " << status;
+            qDebug() << "\r进度: " << percentage << "% (" << current << "/" << total << ") " << status;
             if (current == total) {
-                std::cout << std::endl;
+                qDebug() <<"\n";
             }
         }
     });
@@ -1545,15 +1532,15 @@ bool CLIHandler::handleImportDocumentsExcel(const std::vector<std::string>& args
     if (result.success) {
         ImportResult importResult = result.data.value();
         printSuccess("文档数据导入完成！");
-        std::cout << "总记录数: " << importResult.totalRecords << std::endl;
-        std::cout << "成功导入: " << importResult.successfulImports << std::endl;
-        std::cout << "导入失败: " << importResult.failedImports << std::endl;
-        std::cout << "耗时: " << importResult.duration.count() << "ms" << std::endl;
+        qDebug() << QString::fromUtf8("总记录数: " + std::to_string(importResult.totalRecords));
+        qDebug() << QString::fromUtf8("成功导入: " + std::to_string(importResult.successfulImports));
+        qDebug() << QString::fromUtf8("导入失败: " + std::to_string(importResult.failedImports));
+        qDebug() << QString::fromUtf8("耗时: " + std::to_string(importResult.duration.count()) + "ms");
         
         if (!importResult.errors.empty()) {
             printWarning("导入过程中的错误:");
             for (const auto& error : importResult.errors) {
-                std::cout << "  - " << error << std::endl;
+                qDebug() << QString::fromUtf8("  - " + error) +"\n";
             }
         }
         return true;
@@ -1563,7 +1550,7 @@ bool CLIHandler::handleImportDocumentsExcel(const std::vector<std::string>& args
         if (result.data && !result.data->errors.empty()) {
             printWarning("导入过程中的错误:");
             for (const auto& error : result.data->errors) {
-                std::cout << "  - " << error << std::endl;
+                qDebug() << QString::fromUtf8("  - " + error) +"\n";
             }
         }
         return false;
@@ -1593,10 +1580,10 @@ bool CLIHandler::handleExportDocumentsExcel(const std::vector<std::string>& args
     if (result.success) {
         ExportResult exportResult = result.data.value();
         printSuccess("文档数据导出完成！");
-        std::cout << "导出记录数: " << exportResult.totalRecords << std::endl;
-        std::cout << "文件大小: " << exportResult.fileSize << " bytes" << std::endl;
-        std::cout << "文件路径: " << exportResult.filePath << std::endl;
-        std::cout << "耗时: " << exportResult.duration.count() << "ms" << std::endl;
+        qDebug() << "导出记录数: " << exportResult.totalRecords +"\n";
+        qDebug() << "文件大小: " << exportResult.fileSize << " bytes\n";
+        qDebug() << "文件路径: " << exportResult.filePath +"\n";
+        qDebug() << "耗时: " << exportResult.duration.count() << "ms\n";
         return true;
     } else {
         printError("文档数据导出失败: " + result.message);
@@ -1618,12 +1605,12 @@ bool CLIHandler::handleGenerateUserTemplate(const std::vector<std::string>& args
     
     if (result.success) {
         printSuccess("用户导入模板生成成功！");
-        std::cout << "模板文件: " << filePath << std::endl;
-        std::cout << "模板包含以下列:" << std::endl;
-        std::cout << "  - 用户名 (必需)" << std::endl;
-        std::cout << "  - 邮箱 (必需)" << std::endl;
-        std::cout << "  - 密码 (可选，如不提供将使用默认密码)" << std::endl;
-        std::cout << "  - 是否激活 (可选，默认为1)" << std::endl;
+        qDebug() << "模板文件: " << filePath +"\n";
+        qDebug() << "模板包含以下列:\n";
+        qDebug() << "  - 用户名 (必需)\n";
+        qDebug() << "  - 邮箱 (必需)\n";
+        qDebug() << "  - 密码 (可选，如不提供将使用默认密码)\n";
+        qDebug() << "  - 是否激活 (可选，默认为1)\n";
         return true;
     } else {
         printError("用户导入模板生成失败: " + result.message);
@@ -1645,14 +1632,14 @@ bool CLIHandler::handleGenerateDocumentTemplate(const std::vector<std::string>& 
     
     if (result.success) {
         printSuccess("文档导入模板生成成功！");
-        std::cout << "模板文件: " << filePath << std::endl;
-        std::cout << "模板包含以下列:" << std::endl;
-        std::cout << "  - 标题 (必需)" << std::endl;
-        std::cout << "  - 描述 (可选)" << std::endl;
-        std::cout << "  - 文件路径 (可选)" << std::endl;
-        std::cout << "  - 所有者ID (必需)" << std::endl;
-        std::cout << "  - 文件大小 (可选)" << std::endl;
-        std::cout << "  - 内容类型 (可选)" << std::endl;
+        qDebug() << "模板文件: " << filePath +"\n";
+        qDebug() << "模板包含以下列:\n";
+        qDebug() << "  - 标题 (必需)\n";
+        qDebug() << "  - 描述 (可选)\n";
+        qDebug() << "  - 文件路径 (可选)\n";
+        qDebug() << "  - 所有者ID (必需)\n";
+        qDebug() << "  - 文件大小 (可选)\n";
+        qDebug() << "  - 内容类型 (可选)\n";
         return true;
     } else {
         printError("文档导入模板生成失败: " + result.message);
@@ -1690,27 +1677,25 @@ bool CLIHandler::handlePreviewExcel(const std::vector<std::string>& args) {
     if (result.success) {
         DataPreview preview = result.data.value();
         printSuccess("Excel文件预览成功！");
-        std::cout << "总行数: " << preview.totalRows << std::endl;
-        std::cout << "预览行数: " << preview.rows.size() << std::endl;
-        std::cout << "列数: " << preview.headers.size() << std::endl;
+        qDebug() << "总行数: " << preview.totalRows +"\n";
+        qDebug() << "预览行数: " << preview.rows.size() +"\n";
+        qDebug() << "列数: " << preview.headers.size() +"\n";
         
         if (!preview.headers.empty()) {
-            std::cout << "\n列标题:" << std::endl;
+            qDebug() << "\n列标题:\n";
             for (size_t i = 0; i < preview.headers.size(); ++i) {
-                std::cout << "  " << (i + 1) << ". " << preview.headers[i] << std::endl;
+                qDebug() << "  " << (i + 1) << ". " << preview.headers[i] +"\n";
             }
         }
         
         if (!preview.rows.empty()) {
-            std::cout << "\n预览数据:" << std::endl;
-            std::cout << std::string(80, '-') << std::endl;
+            qDebug() << "\n预览数据:\n";
+            qDebug() << std::string(80, '-') +"\n";
             
             // 打印标题行
-            for (size_t i = 0; i < preview.headers.size(); ++i) {
-                std::cout << std::setw(15) << preview.headers[i] << " | ";
-            }
-            std::cout << std::endl;
-            std::cout << std::string(80, '-') << std::endl;
+
+            qDebug() <<"\n";
+            qDebug() << std::string(80, '-') +"\n";
             
             // 打印数据行
             for (const auto& row : preview.rows) {
@@ -1719,17 +1704,17 @@ bool CLIHandler::handlePreviewExcel(const std::vector<std::string>& args) {
                     if (cell.length() > 14) {
                         cell = cell.substr(0, 11) + "...";
                     }
-                    std::cout << std::setw(15) << cell << " | ";
+       
                 }
-                std::cout << std::endl;
+                qDebug() <<"\n";
             }
-            std::cout << std::string(80, '-') << std::endl;
+            qDebug() << std::string(80, '-') +"\n";
         }
         
         if (!preview.validationErrors.empty()) {
             printWarning("数据验证错误:");
             for (const auto& error : preview.validationErrors) {
-                std::cout << "  - " << error << std::endl;
+                qDebug() << "  - " << error +"\n";
             }
         }
         
@@ -1766,9 +1751,9 @@ bool CLIHandler::handleValidateExcel(const std::vector<std::string>& args) {
     
     if (result.success) {
         printSuccess("Excel文件验证通过！");
-        std::cout << "文件: " << filePath << std::endl;
-        std::cout << "数据类型: " << dataType << std::endl;
-        std::cout << "验证结果: 通过" << std::endl;
+        qDebug() << "文件: " << filePath +"\n";
+        qDebug() << "数据类型: " << dataType +"\n";
+        qDebug() << "验证结果: 通过\n";
         return true;
     } else {
         printError("Excel文件验证失败: " + result.message);
@@ -1821,9 +1806,9 @@ bool CLIHandler::handleHistory(const std::vector<std::string>& args) {
     }
     std::string line;
     int idx = 1;
-    std::cout << "命令历史记录：" << std::endl;
+    qDebug() << "命令历史记录：\n";
     while (std::getline(file, line)) {
-        std::cout << idx++ << ": " << line << std::endl;
+        qDebug() << idx++ << ": " << line +"\n";
     }
     return true;
 }

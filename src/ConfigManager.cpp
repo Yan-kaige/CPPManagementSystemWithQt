@@ -1,5 +1,6 @@
 #include "ConfigManager.h"
 #include <fstream>
+#include <QDebug>
 
 std::unique_ptr<ConfigManager> ConfigManager::instance = nullptr;
 std::mutex ConfigManager::mutex_;
@@ -14,8 +15,9 @@ ConfigManager* ConfigManager::getInstance() {
 
 bool ConfigManager::loadConfig(const std::string& configFile) {
     try {
-        std::cout << "当前工作目录: " << std::filesystem::current_path() << std::endl;
-        std::cout << "当前配置文件: " << configFile << std::endl;
+        std::string a = std::filesystem::current_path().string();
+        qDebug() << QString::fromUtf8("当前工作目录1: " + a);
+        qDebug() << QString::fromUtf8("当前配置文件: " + configFile);
         std::ifstream file(configFile);
         if (!file.is_open()) {
             std::cerr << "无法打开配置文件: " << configFile << std::endl;
@@ -25,7 +27,7 @@ bool ConfigManager::loadConfig(const std::string& configFile) {
         file >> config;
         file.close();
 
-        std::cout << "配置文件加载成功: " << configFile << std::endl;
+        qDebug() << QString::fromUtf8("配置文件加载成功: " + configFile);
         return true;
 
     } catch (const json::exception& e) {

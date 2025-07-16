@@ -4,7 +4,7 @@
 #include <QFileInfo>
 #include <QDir>
 #include <QFile>
-
+#include <QDebug>
 
 std::unique_ptr<Logger> Logger::instance = nullptr;
 std::mutex Logger::mutex_;
@@ -31,7 +31,7 @@ bool Logger::initialize(const std::string& filePath, LogLevel level, size_t maxS
     backupCount = backups;
     currentSize = 0;
 
-    QFileInfo fileInfo(QString::fromStdString(filePath));
+    QFileInfo fileInfo(QString::fromUtf8(filePath));
     QDir logDir = fileInfo.absoluteDir();
     if (!logDir.exists()) {
         logDir.mkpath(".");
@@ -53,14 +53,14 @@ bool Logger::initialize(const std::string& filePath, LogLevel level, size_t maxS
 void Logger::rotateLogFile() {
     logFile.close();
     for (int i = backupCount - 1; i >= 0; --i) {
-        QString oldName = QString::fromStdString(logFilePath) + "." + QString::number(i);
-        QString newName = QString::fromStdString(logFilePath) + "." + QString::number(i + 1);
+        QString oldName = QString::fromUtf8(logFilePath) + "." + QString::number(i);
+        QString newName = QString::fromUtf8(logFilePath) + "." + QString::number(i + 1);
 
         if (QFile::exists(oldName)) {
             QFile::rename(oldName, newName);
         }
     }
-    QFile::rename(QString::fromStdString(logFilePath), QString::fromStdString(logFilePath) + ".0");
+    QFile::rename(QString::fromUtf8(logFilePath), QString::fromUtf8(logFilePath) + ".0");
 
     logFile.open(logFilePath, std::ios::trunc);
     currentSize = 0;
@@ -93,7 +93,7 @@ void Logger::log(LogLevel level, const std::string& message) {
     std::string levelStr = logLevelToString(level);
     std::string output = "[" + std::string(timeBuf) + "][" + levelStr + "] " + message + "\n";
 
-    std::cout << output;
+    qDebug() << QString::fromUtf8(output);
 
     if (logFile.is_open()) {
         logFile << output;

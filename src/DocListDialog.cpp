@@ -62,9 +62,9 @@ void DocListDialog::setupTable(const std::vector<Document>& docs)
     for (int i = 0; i < docs.size(); ++i) {
         const Document& doc = docs[i];
         tableWidget->setItem(i, 0, new QTableWidgetItem(QString::number(doc.id)));
-        tableWidget->setItem(i, 1, new QTableWidgetItem(QString::fromStdString(doc.title)));
+        tableWidget->setItem(i, 1, new QTableWidgetItem(QString::fromUtf8(doc.title)));
         tableWidget->setItem(i, 2, new QTableWidgetItem(QString::number(doc.file_size) + " bytes"));
-        tableWidget->setItem(i, 3, new QTableWidgetItem(QString::fromStdString(Utils::formatTimestamp(doc.created_at))));
+        tableWidget->setItem(i, 3, new QTableWidgetItem(QString::fromUtf8(Utils::formatTimestamp(doc.created_at))));
         QPushButton* btnDel = new QPushButton("删除");
         btnDel->setProperty("docId", doc.id);
         connect(btnDel, &QPushButton::clicked, this, &DocListDialog::onDeleteDocClicked);
@@ -72,24 +72,24 @@ void DocListDialog::setupTable(const std::vector<Document>& docs)
         // 下载按钮
         QString ext;
         QMimeDatabase mimeDb;
-        QMimeType mime = mimeDb.mimeTypeForName(QString::fromStdString(doc.content_type));
+        QMimeType mime = mimeDb.mimeTypeForName(QString::fromUtf8(doc.content_type));
         if (mime.isValid() && !mime.suffixes().isEmpty()) {
             ext = "." + mime.suffixes().first();
         } else {
             ext = "";
         }
-        QString suggestedName = QString::fromStdString(doc.title) + ext;
+        QString suggestedName = QString::fromUtf8(doc.title) + ext;
         QPushButton* btnDownload = new QPushButton("下载");
-        btnDownload->setProperty("minioKey", QString::fromStdString(doc.minio_key));
+        btnDownload->setProperty("minioKey", QString::fromUtf8(doc.minio_key));
         btnDownload->setProperty("suggestedName", suggestedName);
         connect(btnDownload, &QPushButton::clicked, this, &DocListDialog::onDownloadDocClicked);
         tableWidget->setCellWidget(i, 5, btnDownload);
         // 编辑按钮
         QPushButton* btnEdit = new QPushButton("编辑");
         btnEdit->setProperty("docId", doc.id);
-        btnEdit->setProperty("title", QString::fromStdString(doc.title));
-        btnEdit->setProperty("desc", QString::fromStdString(doc.description));
-        btnEdit->setProperty("minioKey", QString::fromStdString(doc.minio_key));
+        btnEdit->setProperty("title", QString::fromUtf8(doc.title));
+        btnEdit->setProperty("desc", QString::fromUtf8(doc.description));
+        btnEdit->setProperty("minioKey", QString::fromUtf8(doc.minio_key));
         connect(btnEdit, &QPushButton::clicked, this, &DocListDialog::onEditDocClicked);
         tableWidget->setCellWidget(i, 6, btnEdit);
     }
@@ -159,7 +159,7 @@ void DocListDialog::onAddDocClicked()
             QMessageBox::warning(&dlg, "提示", "标题和文件不能为空！");
             return;
         }
-        std::vector<std::string> args = { "adddoc", title.toStdString(), desc.toStdString(), file.toStdString() };
+        std::vector<std::string> args = { "adddoc", title.toUtf8().constData(), desc.toUtf8().constData(), file.toUtf8().constData() };
         if (g_cliHandler->handleAddDocument(args)) {
             QMessageBox::information(&dlg, "成功", "上传成功！");
             dlg.accept();
@@ -189,7 +189,7 @@ void DocListDialog::onSearchDocClicked()
     if (keyword.isEmpty()) {
         docs = g_cliHandler->getUserDocsForUI(userId);
     } else {
-        docs = g_cliHandler->getSearchedDocsForUI(userId, keyword.toStdString());
+        docs = g_cliHandler->getSearchedDocsForUI(userId, keyword.toUtf8().constData());
     }
     refreshDocs(docs);
 }
@@ -206,7 +206,7 @@ void DocListDialog::onDownloadDocClicked()
         QMessageBox::critical(this, "错误", "CLIHandler 未初始化");
         return;
     }
-    std::vector<std::string> args = { "download", minioKey.toStdString(), savePath.toStdString() };
+    std::vector<std::string> args = { "download", minioKey.toUtf8().constData(), savePath.toUtf8().constData() };
     bool ok = g_cliHandler->handleDownloadFile(args);
     if (ok) {
         QMessageBox::information(this, "下载文件", "下载成功！");
@@ -252,7 +252,7 @@ void DocListDialog::onEditDocClicked()
             QMessageBox::warning(&dlg, "提示", "标题不能为空！");
             return;
         }
-        std::vector<std::string> args = { "updatedoc", std::to_string(docId), newTitle.toStdString(), newDesc.toStdString() };
+        std::vector<std::string> args = { "updatedoc", std::to_string(docId), newTitle.toUtf8().constData(), newDesc.toUtf8().constData() };
         bool ok = g_cliHandler->handleUpdateDocument(args);
         if (ok) {
             QMessageBox::information(&dlg, "成功", "文档信息已更新！");
@@ -293,7 +293,7 @@ void DocListDialog::onExportDocsClicked()
     std::string username = userPair.second.username;
 
     // 3. 调用导出
-    bool ok = g_cliHandler->handleExportDocsExcel(username, filePath.toStdString());
+    bool ok = g_cliHandler->handleExportDocsExcel(username, filePath.toUtf8().constData());
     if (ok) {
         QMessageBox::information(this, "导出成功", "文档已成功导出到:\n" + filePath);
     } else {

@@ -5,7 +5,7 @@
 #include <iomanip>
 #include <random>
 #include <chrono>
-
+#include <QDebug>
 AuthManager::AuthManager(DatabaseManager* db, RedisManager* redis)
         : dbManager(db), redisManager(redis), isLoggedIn(false), currentUserId(-1) {
     // 其他初始化逻辑可写可不写
@@ -354,15 +354,15 @@ void AuthManager::clearLoginAttempts() {
 void AuthManager::listActiveSessions() const {
     std::lock_guard<std::mutex> lock(sessionMutex);
     
-    std::cout << "活跃会话列表:" << std::endl;
+    qDebug() << "活跃会话列表: \n" ;
     for (const auto& pair : activeSessions) {
         const Session& session = pair.second;
         auto now = std::chrono::system_clock::now();
         auto remaining = std::chrono::duration_cast<std::chrono::hours>(session.expiresAt - now);
         
-        std::cout << "令牌: " << pair.first.substr(0, 8) << "..."
+        qDebug() << "令牌: " << pair.first.substr(0, 8) << "..."
                   << " 用户: " << session.username
-                  << " 剩余时间: " << remaining.count() << "小时" << std::endl;
+                  << " 剩余时间: " << remaining.count() << "小时 \n" ;
     }
 }
 

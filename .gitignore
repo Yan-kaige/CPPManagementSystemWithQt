@@ -38,3 +38,15 @@ CMakeCache.txt
 *.ts~
 
 # 忽略配置文件（可选，如果 config.json 为用户本地）
+
+# 忽略VS工程和输出目录
+.vs/
+debug/
+release/
+.cli_history
+.qmake.stash
+*.qtvscr
+*.vcxproj
+*.filters
+testcppqt.vcxproj.user
+config.json

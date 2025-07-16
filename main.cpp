@@ -17,7 +17,8 @@ CLIHandler* g_cliHandler = nullptr;
 
 // 处理 Ctrl+C 等信号安全退出
 void signalHandler(int signum) {
-    std::cout << "\n接收到中断信号 (" << signum << ")，正在安全退出...\n";
+    QString msg = QString("\n接收到中断信号 (%1)，正在安全退出...\n").arg(signum);
+    qDebug() << msg;
     if (g_cliHandler) g_cliHandler->shutdown();
     exit(signum);
 }
@@ -42,7 +43,7 @@ void signalHandler(int signum) {
 //     }
 
 //     if (showHelp) {
-//         std::cout << "用法: app [-c config.json] [-e \"command\"]\n";
+//         qDebug() << "用法: app [-c config.json] [-e \"command\"]\n";
 //         return 0;
 //     }
 

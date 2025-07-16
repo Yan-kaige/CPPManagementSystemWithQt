@@ -31,7 +31,7 @@ Result<ImportResult> ImportExportManager::importUsersFromCSV(const std::string& 
             return Result<ImportResult>::Error("文件不是有效的CSV格式");
         }
         
-        if (!QFile::exists(QString::fromStdString(filePath))) {
+        if (!QFile::exists(QString::fromUtf8(filePath))) {
 
             return Result<ImportResult>::Error("文件不存在: " + filePath);
         }
@@ -186,7 +186,7 @@ Result<ExportResult> ImportExportManager::exportUsersToCSV(const std::string& fi
         file.close();
         
         // 获取文件大小
-        QFileInfo fileInfo(QString::fromStdString(filePath));
+        QFileInfo fileInfo(QString::fromUtf8(filePath));
         result.fileSize = fileInfo.size();
         result.filePath = filePath;
         
@@ -210,7 +210,7 @@ Result<ImportResult> ImportExportManager::importDocumentsFromCSV(const std::stri
             return Result<ImportResult>::Error("文件不是有效的CSV格式");
         }
         
-        if (!QFile::exists(QString::fromStdString(filePath))) {
+        if (!QFile::exists(QString::fromUtf8(filePath))) {
 
             return Result<ImportResult>::Error("文件不存在: " + filePath);
         }
@@ -343,7 +343,7 @@ Result<ExportResult> ImportExportManager::exportDocumentsToCSV(const std::string
         
         file.close();
         
-        QFileInfo fileInfo(QString::fromStdString(filePath));
+        QFileInfo fileInfo(QString::fromUtf8(filePath));
         result.fileSize = fileInfo.size();
         result.filePath = filePath;
         
@@ -364,7 +364,7 @@ Result<DataPreview> ImportExportManager::previewCSVData(const std::string& fileP
         if (!isCSVFile(filePath)) {
             return Result<DataPreview>::Error("文件不是有效的CSV格式");
         }
-        if (!QFile::exists(QString::fromStdString(filePath))) {
+        if (!QFile::exists(QString::fromUtf8(filePath))) {
 
             return Result<DataPreview>::Error("文件不存在: " + filePath);
         }
@@ -525,7 +525,7 @@ bool ImportExportManager::isCSVFile(const std::string& filePath) {
 
 // 私有辅助函数实现
 bool ImportExportManager::isValidCSVFile(const std::string& filePath) {
-    return isCSVFile(filePath) && QFile::exists(QString::fromStdString(filePath));
+    return isCSVFile(filePath) && QFile::exists(QString::fromUtf8(filePath));
 }
 
 

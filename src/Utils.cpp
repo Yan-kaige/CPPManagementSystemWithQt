@@ -135,7 +135,7 @@ bool Utils::isValidEmail(const std::string& email) {
     return std::regex_match(email, emailRegex);
 }
 bool Utils::fileExists(const std::string& filename) {
-    return QFile::exists(QString::fromStdString(filename));
+    return QFile::exists(QString::fromUtf8(filename));
 }
 
 

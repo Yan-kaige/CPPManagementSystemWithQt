@@ -7,6 +7,7 @@
 #include <QApplication>
 #include "DocListDialog.h"
 #include <QFileDialog>
+#include <QDebug>
 
 extern CLIHandler* g_cliHandler; // 假设有全局CLIHandler指针
 
@@ -36,15 +37,24 @@ void MainWindow::on_btnLogin_clicked()
         QMessageBox::critical(this, "错误", "CLIHandler 未初始化");
         return;
     }
-    std::vector<std::string> args = {"login", username.toStdString(), password.toStdString()};
-    bool ok = g_cliHandler->handleLogin(args);
-    if (ok) {
-        QMessageBox::information(this, "登录", "登录成功");
-        updateUserList();
-        updateCurrentUserInfo();
-    } else {
-        QMessageBox::warning(this, "登录", "登录失败，请检查用户名和密码");
+    qDebug() << username;
+    qDebug() << password;
+    try {
+        std::vector<std::string> args = { "login", username.toUtf8().constData(), password.toUtf8().constData() };
+        bool ok = g_cliHandler->handleLogin(args);
+        if (ok) {
+            QMessageBox::information(this, "登录", "登录成功");
+            updateUserList();
+            updateCurrentUserInfo();
+        }
+        else {
+            QMessageBox::warning(this, "登录", "登录失败，请检查用户名和密码");
+        }
     }
+    catch (const std::length_error& e) {
+        qDebug() << "长度错误: " << e.what();
+    }
+
 }
 
 void MainWindow::on_btnLogout_clicked()
@@ -84,8 +94,8 @@ void MainWindow::updateUserList()
     for (int i = 0; i < users.size(); ++i) {
         const User& user = users[i];
         ui->tableWidgetUsers->setItem(i, 0, new QTableWidgetItem(QString::number(user.id)));
-        ui->tableWidgetUsers->setItem(i, 1, new QTableWidgetItem(QString::fromStdString(user.username)));
-        ui->tableWidgetUsers->setItem(i, 2, new QTableWidgetItem(QString::fromStdString(user.email)));
+        ui->tableWidgetUsers->setItem(i, 1, new QTableWidgetItem(QString::fromUtf8(user.username)));
+        ui->tableWidgetUsers->setItem(i, 2, new QTableWidgetItem(QString::fromUtf8(user.email)));
         ui->tableWidgetUsers->setItem(i, 3, new QTableWidgetItem(user.is_active ? "激活" : "禁用"));
         QPushButton* btnDel = new QPushButton("删除");
         btnDel->setProperty("userId", user.id);
@@ -111,7 +121,7 @@ void MainWindow::on_btnSearchUser_clicked()
         updateUserList();
         return;
     }
-    std::vector<User> users = g_cliHandler->getSearchedUsersForUI(keyword.toStdString());
+    std::vector<User> users = g_cliHandler->getSearchedUsersForUI(keyword.toUtf8().constData());
 
     // 设置表头
     ui->tableWidgetUsers->clear();
@@ -125,8 +135,8 @@ void MainWindow::on_btnSearchUser_clicked()
     for (int i = 0; i < users.size(); ++i) {
         const User& user = users[i];
         ui->tableWidgetUsers->setItem(i, 0, new QTableWidgetItem(QString::number(user.id)));
-        ui->tableWidgetUsers->setItem(i, 1, new QTableWidgetItem(QString::fromStdString(user.username)));
-        ui->tableWidgetUsers->setItem(i, 2, new QTableWidgetItem(QString::fromStdString(user.email)));
+        ui->tableWidgetUsers->setItem(i, 1, new QTableWidgetItem(QString::fromUtf8(user.username)));
+        ui->tableWidgetUsers->setItem(i, 2, new QTableWidgetItem(QString::fromUtf8(user.email)));
         ui->tableWidgetUsers->setItem(i, 3, new QTableWidgetItem(user.is_active ? "激活" : "禁用"));
         QPushButton* btnDel = new QPushButton("删除");
         btnDel->setProperty("userId", user.id);
@@ -217,7 +227,7 @@ void MainWindow::on_btnRegisterUser_clicked()
         QMessageBox::warning(this, "注册", "请填写完整的用户名、密码和邮箱");
         return;
     }
-    std::vector<std::string> args = {"register", username.toStdString(), password.toStdString(), email.toStdString()};
+    std::vector<std::string> args = {"register", username.toUtf8().constData(), password.toUtf8().constData(), email.toUtf8().constData()};
     bool ok = g_cliHandler->handleRegister(args);
     if (ok) {
         QMessageBox::information(this, "注册", "注册成功！");
@@ -246,7 +256,7 @@ void MainWindow::updateCurrentUserInfo()
     auto result = g_cliHandler->getCurrentUserForUI();
     if (result.first) {
         const User& user = result.second;
-        ui->labelCurrentUser->setText(QString("用户：%1\n邮箱：%2").arg(QString::fromStdString(user.username), QString::fromStdString(user.email)));
+        ui->labelCurrentUser->setText(QString("用户：%1\n邮箱：%2").arg(QString::fromUtf8(user.username), QString::fromUtf8(user.email)));
         ui->btnViewDocs->setVisible(true);
         // 登录后显示功能区，隐藏登录/注册页签
         ui->tabWidgetAuth->setVisible(false);
@@ -287,7 +297,7 @@ void MainWindow::on_btnChangePassword_clicked()
         QMessageBox::warning(this, "修改密码", "新密码与确认密码不一致");
         return;
     }
-    std::vector<std::string> args = {"changepass", oldPass.toStdString(), newPass.toStdString()};
+    std::vector<std::string> args = {"changepass", oldPass.toUtf8().constData(), newPass.toUtf8().constData()};
     bool ok = g_cliHandler->handleChangePassword(args);
     if (ok) {
         QMessageBox::information(this, "修改密码", "密码修改成功，请重新登录");
@@ -325,7 +335,7 @@ void MainWindow::on_btnExportUsers_clicked()
 {
     QString filePath = QFileDialog::getSaveFileName(this, "导出用户", "users_export.csv", "Excel Files (*.xlsx);;CSV Files (*.csv);;All Files (*)");
     if (filePath.isEmpty()) return;
-    std::vector<std::string> args = { "export-users-excel", filePath.toStdString() };
+    std::vector<std::string> args = { "export-users-excel", filePath.toUtf8().constData() };
     bool ok = g_cliHandler->handleExportUsersExcel(args);
     if (ok) {
         QMessageBox::information(this, "导出用户", "导出成功！");
@@ -353,11 +363,11 @@ void MainWindow::on_btnDownloadUserTemplate_clicked()
         QMessageBox::warning(this, "下载失败", "MinIO客户端未初始化");
         return;
     }
-    auto result = g_cliHandler->minioClient->getObject(minioPath, filePath.toStdString());
+    auto result = g_cliHandler->minioClient->getObject(minioPath, filePath.toUtf8().constData());
     if (result.success && result.data.value()) {
         QMessageBox::information(this, "下载成功", "模板已保存到:\n" + filePath);
     } else {
-        QMessageBox::warning(this, "下载失败", "下载过程中出现错误: " + QString::fromStdString(result.message));
+        QMessageBox::warning(this, "下载失败", "下载过程中出现错误: " + QString::fromUtf8(result.message));
     }
 }
 
@@ -375,7 +385,7 @@ void MainWindow::on_btnImportUsers_clicked()
     }
 
     // 2. 调用导入命令
-    std::vector<std::string> args = {"import-users-excel", filePath.toStdString()};
+    std::vector<std::string> args = {"import-users-excel", filePath.toUtf8().constData()};
     bool ok = g_cliHandler->handleImportUsersExcel(args);
     if (ok) {
         QMessageBox::information(this, "导入成功", "用户数据导入成功！");
