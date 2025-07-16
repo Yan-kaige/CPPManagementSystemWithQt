@@ -15,6 +15,12 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+    // 初始状态：只显示登录/注册页签
+    ui->tabWidgetAuth->setVisible(true);
+    ui->groupBoxChangePassword->setVisible(false);
+    ui->btnLogout->setVisible(false);
+    ui->btnViewDocs->setVisible(false);
+    ui->groupBoxUsers->setVisible(false);
 }
 
 MainWindow::~MainWindow()
@@ -230,6 +236,11 @@ void MainWindow::updateCurrentUserInfo()
     if (!g_cliHandler) {
         ui->labelCurrentUser->setText("未登录");
         ui->btnViewDocs->setVisible(false);
+        // 未登录时只显示登录/注册页签
+        ui->tabWidgetAuth->setVisible(true);
+        ui->groupBoxChangePassword->setVisible(false);
+        ui->btnLogout->setVisible(false);
+        ui->groupBoxUsers->setVisible(false);
         return;
     }
     auto result = g_cliHandler->getCurrentUserForUI();
@@ -237,9 +248,19 @@ void MainWindow::updateCurrentUserInfo()
         const User& user = result.second;
         ui->labelCurrentUser->setText(QString("用户：%1\n邮箱：%2").arg(QString::fromStdString(user.username), QString::fromStdString(user.email)));
         ui->btnViewDocs->setVisible(true);
+        // 登录后显示功能区，隐藏登录/注册页签
+        ui->tabWidgetAuth->setVisible(false);
+        ui->groupBoxChangePassword->setVisible(true);
+        ui->btnLogout->setVisible(true);
+        ui->groupBoxUsers->setVisible(true);
     } else {
         ui->labelCurrentUser->setText("未登录");
         ui->btnViewDocs->setVisible(false);
+        // 未登录时只显示登录/注册页签
+        ui->tabWidgetAuth->setVisible(true);
+        ui->groupBoxChangePassword->setVisible(false);
+        ui->btnLogout->setVisible(false);
+        ui->groupBoxUsers->setVisible(false);
     }
 }
 

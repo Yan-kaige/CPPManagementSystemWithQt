@@ -50,93 +50,137 @@
      </layout>
     </item>
     <item>
-     <widget class="QGroupBox" name="groupBoxLogin">
-      <property name="title">
-       <string>用户登录</string>
+     <widget class="QTabWidget" name="tabWidgetAuth">
+      <property name="tabPosition">
+       <enum>QTabWidget::North</enum>
       </property>
-      <layout class="QHBoxLayout" name="horizontalLayoutLogin">
-       <item>
-        <widget class="QLabel" name="labelUsername">
-         <property name="text">
-          <string>用户名：</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLineEdit" name="lineEditUsername"/>
-       </item>
-       <item>
-        <widget class="QLabel" name="labelPassword">
-         <property name="text">
-          <string>密码：</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLineEdit" name="lineEditPassword">
-         <property name="echoMode">
-          <enum>QLineEdit::Password</enum>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="btnLogin">
-         <property name="text">
-          <string>登录</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </widget>
-    </item>
-    <item>
-     <widget class="QGroupBox" name="groupBoxRegister">
-      <property name="title">
-       <string>用户注册</string>
+      <property name="tabShape">
+       <enum>QTabWidget::Rounded</enum>
       </property>
-      <layout class="QHBoxLayout" name="horizontalLayoutRegister">
-       <item>
-        <widget class="QLabel" name="labelRegisterUsername">
-         <property name="text">
-          <string>用户名：</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLineEdit" name="lineEditRegisterUsername"/>
-       </item>
-       <item>
-        <widget class="QLabel" name="labelRegisterPassword">
-         <property name="text">
-          <string>密码：</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLineEdit" name="lineEditRegisterPassword">
-         <property name="echoMode">
-          <enum>QLineEdit::Password</enum>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLabel" name="labelRegisterEmail">
-         <property name="text">
-          <string>邮箱：</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLineEdit" name="lineEditRegisterEmail"/>
-       </item>
-       <item>
-        <widget class="QPushButton" name="btnRegisterUser">
-         <property name="text">
-          <string>注册</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
+      <widget class="QWidget" name="tabLogin">
+       <attribute name="title">
+        <string>登录</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="verticalLayoutLogin">
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayoutLoginUser">
+          <item>
+           <widget class="QLabel" name="labelUsername">
+            <property name="text">
+             <string>用户名：</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="lineEditUsername"/>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayoutLoginPass">
+          <item>
+           <widget class="QLabel" name="labelPassword">
+            <property name="text">
+             <string>密码：</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="lineEditPassword">
+            <property name="echoMode">
+             <enum>QLineEdit::Password</enum>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btnLogin">
+          <property name="text">
+           <string>登录</string>
+          </property>
+          <property name="minimumHeight">
+           <number>36</number>
+          </property>
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="tabRegister">
+       <attribute name="title">
+        <string>注册</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="verticalLayoutRegister">
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayoutRegisterUser">
+          <item>
+           <widget class="QLabel" name="labelRegisterUsername">
+            <property name="text">
+             <string>用户名：</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="lineEditRegisterUsername"/>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayoutRegisterPass">
+          <item>
+           <widget class="QLabel" name="labelRegisterPassword">
+            <property name="text">
+             <string>密码：</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="lineEditRegisterPassword">
+            <property name="echoMode">
+             <enum>QLineEdit::Password</enum>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayoutRegisterEmail">
+          <item>
+           <widget class="QLabel" name="labelRegisterEmail">
+            <property name="text">
+             <string>邮箱：</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="lineEditRegisterEmail"/>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btnRegisterUser">
+          <property name="text">
+           <string>注册</string>
+          </property>
+          <property name="minimumHeight">
+           <number>36</number>
+          </property>
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
      </widget>
     </item>
     <item>
