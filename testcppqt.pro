@@ -82,11 +82,7 @@ HEADERS += \
 # -----------------------------------
 FORMS += mainwindow.ui
 
-# -----------------------------------
-# 翻译文件
-# -----------------------------------
-TRANSLATIONS += testcppqt_zh_CN.ts
-CONFIG += lrelease embed_translations
+
 CONFIG_FILES += config/config.json
 
 # -----------------------------------
