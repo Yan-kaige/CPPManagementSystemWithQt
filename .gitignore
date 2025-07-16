@@ -50,3 +50,4 @@ release/
 *.filters
 testcppqt.vcxproj.user
 config.json
+testcppqt.sln
