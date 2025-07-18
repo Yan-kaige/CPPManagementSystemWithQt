@@ -35,7 +35,7 @@ private slots:
     void onDeleteUserClicked();
     void onToggleUserActiveClicked();
     void updateCurrentUserInfo();
-    void on_btnChangePassword_clicked();
+    void on_btnChangePasswordDialog_clicked();
     void on_btnQuit_clicked();
     void on_btnViewDocs_clicked();
     void on_btnExportUsers_clicked();

@@ -6,6 +6,7 @@
 #include <QPushButton>
 #include <QApplication>
 #include "DocListDialog.h"
+#include "ChangePasswordDialog.h"
 #include <QFileDialog>
 #include <QDebug>
 #include <QKeyEvent>
@@ -20,7 +21,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
     // 初始状态：只显示登录/注册页签
     ui->tabWidgetAuth->setVisible(true);
-    ui->groupBoxChangePassword->setVisible(false);
+    ui->btnChangePasswordDialog->setVisible(false);
     ui->btnLogout->setVisible(false);
     ui->btnViewDocs->setVisible(false);
     ui->groupBoxUsers->setVisible(false);
@@ -301,7 +302,7 @@ void MainWindow::updateCurrentUserInfo()
         ui->btnViewDocs->setVisible(false);
         // 未登录时只显示登录/注册页签
         ui->tabWidgetAuth->setVisible(true);
-        ui->groupBoxChangePassword->setVisible(false);
+        ui->btnChangePasswordDialog->setVisible(false);
         ui->btnLogout->setVisible(false);
         ui->groupBoxUsers->setVisible(false);
         return;
@@ -313,7 +314,7 @@ void MainWindow::updateCurrentUserInfo()
         ui->btnViewDocs->setVisible(true);
         // 登录后显示功能区，隐藏登录/注册页签
         ui->tabWidgetAuth->setVisible(false);
-        ui->groupBoxChangePassword->setVisible(true);
+        ui->btnChangePasswordDialog->setVisible(true);
         ui->btnLogout->setVisible(true);
         ui->groupBoxUsers->setVisible(true);
     } else {
@@ -321,50 +322,45 @@ void MainWindow::updateCurrentUserInfo()
         ui->btnViewDocs->setVisible(false);
         // 未登录时只显示登录/注册页签
         ui->tabWidgetAuth->setVisible(true);
-        ui->groupBoxChangePassword->setVisible(false);
+        ui->btnChangePasswordDialog->setVisible(false);
         ui->btnLogout->setVisible(false);
         ui->groupBoxUsers->setVisible(false);
     }
 }
 
-void MainWindow::on_btnChangePassword_clicked()
+void MainWindow::on_btnChangePasswordDialog_clicked()
 {
     if (!g_cliHandler) {
         QMessageBox::critical(this, "错误", "CLIHandler 未初始化");
         return;
     }
+
     // 检查是否已登录
     auto result = g_cliHandler->getCurrentUserForUI();
     if (!result.first) {
         QMessageBox::warning(this, "修改密码", "请先登录后再修改密码");
         return;
     }
-    QString oldPass = ui->lineEditOldPassword->text();
-    QString newPass = ui->lineEditNewPassword->text();
-    QString confirmPass = ui->lineEditConfirmPassword->text();
-    if (oldPass.isEmpty() || newPass.isEmpty() || confirmPass.isEmpty()) {
-        QMessageBox::warning(this, "修改密码", "请填写完整的原密码、新密码和确认密码");
-        return;
-    }
-    if (newPass != confirmPass) {
-        QMessageBox::warning(this, "修改密码", "新密码与确认密码不一致");
-        return;
-    }
-    std::vector<std::string> args = {"changepass", oldPass.toUtf8().constData(), newPass.toUtf8().constData()};
-    bool ok = g_cliHandler->handleChangePassword(args);
-    if (ok) {
-        QMessageBox::information(this, "修改密码", "密码修改成功，请重新登录");
-        // 清空输入框
-        ui->lineEditOldPassword->clear();
-        ui->lineEditNewPassword->clear();
-        ui->lineEditConfirmPassword->clear();
-        // 自动登出
-        std::vector<std::string> logoutArgs = {"logout"};
-        g_cliHandler->handleLogout(logoutArgs);
-        updateUserList();
-        updateCurrentUserInfo();
-    } else {
-        QMessageBox::warning(this, "修改密码", "密码修改失败，请检查原密码或新密码格式");
+
+    // 创建并显示修改密码对话框
+    ChangePasswordDialog dialog(this);
+    if (dialog.exec() == QDialog::Accepted) {
+        QString oldPass = dialog.getOldPassword();
+        QString newPass = dialog.getNewPassword();
+
+        std::vector<std::string> args = {"changepass", oldPass.toUtf8().constData(), newPass.toUtf8().constData()};
+        bool ok = g_cliHandler->handleChangePassword(args);
+
+        if (ok) {
+            QMessageBox::information(this, "修改密码", "密码修改成功，请重新登录");
+            // 自动登出
+            std::vector<std::string> logoutArgs = {"logout"};
+            g_cliHandler->handleLogout(logoutArgs);
+            updateUserList();
+            updateCurrentUserInfo();
+        } else {
+            QMessageBox::warning(this, "修改密码", "密码修改失败，请检查原密码或新密码格式");
+        }
     }
 }
 

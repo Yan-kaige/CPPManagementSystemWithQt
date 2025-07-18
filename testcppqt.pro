@@ -46,6 +46,7 @@ DEFINES += VCPKG_APPLOCAL_DEPS
 SOURCES += \
     main.cpp \
     mainwindow.cpp \
+    ChangePasswordDialog.cpp \
     src/AuthManager.cpp \
     src/DatabaseManager.cpp \
     src/RedisManager.cpp \
@@ -75,7 +76,8 @@ HEADERS += \
     include/RedisManager.h \
     include/linenoise.h \
     include/DocListDialog.h \
-    mainwindow.h
+    mainwindow.h \
+    ChangePasswordDialog.h
 
 # -----------------------------------
 # UI 文件

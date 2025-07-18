@@ -41,6 +41,13 @@
        </widget>
       </item>
       <item>
+       <widget class="QPushButton" name="btnChangePasswordDialog">
+        <property name="text">
+         <string>修改密码</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QPushButton" name="btnLogout">
         <property name="text">
          <string>登出</string>
@@ -190,64 +197,7 @@
       </widget>
      </widget>
     </item>
-    <item>
-     <widget class="QGroupBox" name="groupBoxChangePassword">
-      <property name="title">
-       <string>修改密码</string>
-      </property>
-      <layout class="QHBoxLayout" name="horizontalLayoutChangePassword">
-       <item>
-        <widget class="QLabel" name="labelOldPassword">
-         <property name="text">
-          <string>原密码：</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLineEdit" name="lineEditOldPassword">
-         <property name="echoMode">
-          <enum>QLineEdit::Password</enum>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLabel" name="labelNewPassword">
-         <property name="text">
-          <string>新密码：</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLineEdit" name="lineEditNewPassword">
-         <property name="echoMode">
-          <enum>QLineEdit::Password</enum>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLabel" name="labelConfirmPassword">
-         <property name="text">
-          <string>确认新密码：</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLineEdit" name="lineEditConfirmPassword">
-         <property name="echoMode">
-          <enum>QLineEdit::Password</enum>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="btnChangePassword">
-         <property name="text">
-          <string>修改</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </widget>
-    </item>
+
 
     <item>
      <widget class="QPushButton" name="btnViewDocs">
