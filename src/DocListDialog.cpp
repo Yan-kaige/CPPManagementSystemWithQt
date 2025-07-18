@@ -5,6 +5,7 @@
 #include <QMessageBox>
 #include "Common.h"
 #include "CLIHandler.h"
+#include "ShareDocumentDialog.h"
 #include <QFileDialog>
 #include <QLineEdit>
 #include <QHBoxLayout>
@@ -55,9 +56,9 @@ void DocListDialog::refreshDocs(const std::vector<Document>& docs)
 void DocListDialog::setupTable(const std::vector<Document>& docs)
 {
     tableWidget->clear();
-    tableWidget->setColumnCount(6);
+    tableWidget->setColumnCount(7);
     QStringList headers;
-    headers << "ID" << "标题" << "描述" << "大小" << "创建时间" << "操作";
+    headers << "ID" << "标题" << "描述" << "大小" << "创建时间" << "操作" << "分享";
     tableWidget->setHorizontalHeaderLabels(headers);
     tableWidget->setRowCount(docs.size());
     for (int i = 0; i < docs.size(); ++i) {
@@ -122,6 +123,21 @@ void DocListDialog::setupTable(const std::vector<Document>& docs)
         operationLayout->addStretch();
 
         tableWidget->setCellWidget(i, 5, operationWidget);
+
+        // 分享按钮
+        QPushButton* btnShare = new QPushButton("分享");
+        btnShare->setMaximumWidth(50);
+        btnShare->setProperty("docId", doc.id);
+        btnShare->setProperty("title", QString::fromUtf8(doc.title));
+        btnShare->setProperty("description", QString::fromUtf8(doc.description));
+        btnShare->setProperty("filePath", QString::fromUtf8(doc.file_path));
+        btnShare->setProperty("minioKey", QString::fromUtf8(doc.minio_key));
+        btnShare->setProperty("ownerId", doc.owner_id);
+        btnShare->setProperty("fileSize", static_cast<qulonglong>(doc.file_size));
+        btnShare->setProperty("contentType", QString::fromUtf8(doc.content_type));
+        connect(btnShare, &QPushButton::clicked, this, &DocListDialog::onShareDocClicked);
+
+        tableWidget->setCellWidget(i, 6, btnShare);
     }
     tableWidget->resizeColumnsToContents();
     tableWidget->horizontalHeader()->setStretchLastSection(true);
@@ -341,4 +357,37 @@ void DocListDialog::onExportDocsClicked()
     } else {
         QMessageBox::warning(this, "导出失败", "导出过程中出现错误！");
     }
+}
+
+void DocListDialog::onShareDocClicked()
+{
+    QPushButton* btn = qobject_cast<QPushButton*>(sender());
+    if (!btn) return;
+
+    // 从按钮属性中获取文档信息
+    Document doc;
+    doc.id = btn->property("docId").toInt();
+    doc.title = btn->property("title").toString().toUtf8().constData();
+    doc.description = btn->property("description").toString().toUtf8().constData();
+    doc.file_path = btn->property("filePath").toString().toUtf8().constData();
+    doc.minio_key = btn->property("minioKey").toString().toUtf8().constData();
+    doc.owner_id = btn->property("ownerId").toInt();
+    doc.file_size = btn->property("fileSize").toULongLong();
+    doc.content_type = btn->property("contentType").toString().toUtf8().constData();
+
+    // 检查是否是文档所有者
+    auto currentUserResult = g_cliHandler->getCurrentUserForUI();
+    if (!currentUserResult.first) {
+        QMessageBox::warning(this, "分享失败", "未登录，无法分享文档！");
+        return;
+    }
+
+    if (currentUserResult.second.id != doc.owner_id) {
+        QMessageBox::warning(this, "分享失败", "您不是此文档的所有者，无法分享！");
+        return;
+    }
+
+    // 打开分享对话框
+    ShareDocumentDialog shareDialog(doc, this);
+    shareDialog.exec();
 }

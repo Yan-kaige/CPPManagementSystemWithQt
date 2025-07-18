@@ -62,6 +62,7 @@ public:
     QLineEdit *lineEditRegisterEmail;
     QPushButton *btnRegisterUser;
     QPushButton *btnViewDocs;
+    QPushButton *btnViewSharedDocs;
     QGroupBox *groupBoxUsers;
     QVBoxLayout *verticalLayoutUsers;
     QHBoxLayout *horizontalLayoutExportUser;
@@ -234,6 +235,12 @@ public:
 
         verticalLayout->addWidget(btnViewDocs);
 
+        btnViewSharedDocs = new QPushButton(centralwidget);
+        btnViewSharedDocs->setObjectName("btnViewSharedDocs");
+        btnViewSharedDocs->setVisible(false);
+
+        verticalLayout->addWidget(btnViewSharedDocs);
+
         groupBoxUsers = new QGroupBox(centralwidget);
         groupBoxUsers->setObjectName("groupBoxUsers");
         verticalLayoutUsers = new QVBoxLayout(groupBoxUsers);
@@ -321,7 +328,8 @@ public:
         labelRegisterEmail->setText(QCoreApplication::translate("MainWindow", "\351\202\256\347\256\261\357\274\232", nullptr));
         btnRegisterUser->setText(QCoreApplication::translate("MainWindow", "\346\263\250\345\206\214", nullptr));
         tabWidgetAuth->setTabText(tabWidgetAuth->indexOf(tabRegister), QCoreApplication::translate("MainWindow", "\346\263\250\345\206\214", nullptr));
-        btnViewDocs->setText(QCoreApplication::translate("MainWindow", "\346\237\245\347\234\213\346\226\207\346\241\243", nullptr));
+        btnViewDocs->setText(QCoreApplication::translate("MainWindow", "\346\210\221\347\232\204\346\226\207\346\241\243", nullptr));
+        btnViewSharedDocs->setText(QCoreApplication::translate("MainWindow", "\345\210\206\344\272\253\347\273\231\346\210\221\347\232\204\346\226\207\346\241\243", nullptr));
         groupBoxUsers->setTitle(QCoreApplication::translate("MainWindow", "\347\224\250\346\210\267\345\210\227\350\241\250", nullptr));
         btnExportUsers->setText(QCoreApplication::translate("MainWindow", "\345\257\274\345\207\272\347\224\250\346\210\267", nullptr));
         btnDownloadUserTemplate->setText(QCoreApplication::translate("MainWindow", "\344\270\213\350\275\275\345\257\274\345\205\245\346\250\241\346\235\277", nullptr));

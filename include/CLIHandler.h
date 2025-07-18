@@ -159,6 +159,8 @@ public:
     bool handleUpdateDocument(const std::vector<std::string>& args);
     bool handleDeleteDocument(const std::vector<std::string>& args);
     bool handleSearchDocuments(const std::vector<std::string>& args);
+    bool handleShareDocument(const std::vector<std::string>& args);
+    bool handleListSharedDocuments(const std::vector<std::string>& args);
 
     // 文件管理命令
     bool handleUploadFile(const std::vector<std::string>& args);
@@ -171,6 +173,7 @@ public:
     std::pair<bool, User> getCurrentUserForUI();
     std::vector<Document> getUserDocsForUI(int userId);
     std::vector<Document> getSearchedDocsForUI(int userId, const std::string& keyword);
+    std::vector<Document> getSharedDocsForUI(int userId);
 
 
     // Excel导入导出命令

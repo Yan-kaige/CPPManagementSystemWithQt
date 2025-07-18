@@ -43,6 +43,14 @@ public:
     Result<bool> updateDocument(const Document& doc);
     Result<bool> deleteDocument(int docId);
 
+    // Document sharing operations
+    Result<DocumentShare> createDocumentShare(int documentId, int sharedByUserId, int sharedToUserId,
+                                              int sharedDocumentId, const std::string& sharedMinioKey);
+    Result<std::vector<Document>> getSharedDocuments(int userId, int limit = 100, int offset = 0);
+    Result<std::vector<DocumentShare>> getDocumentShares(int documentId);
+    Result<bool> deleteDocumentShare(int shareId);
+    Result<bool> isDocumentShared(int documentId, int sharedByUserId, int sharedToUserId);
+
     // Search operations
     Result<std::vector<User>> searchUsers(const std::string& query, int limit = 50);
     Result<std::vector<Document>> searchDocuments(const std::string& query, int limit = 50);

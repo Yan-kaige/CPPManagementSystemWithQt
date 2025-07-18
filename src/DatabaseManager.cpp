@@ -47,11 +47,11 @@ bool DatabaseManager::connect(const std::string& host, int port, const std::stri
         LOG_INFO("MySQL数据库连接成功: " + host + ":" + std::to_string(port) + "/" + database);
 
         // 创建表
-//        if (!createTables()) {
-//            LOG_ERROR("创建数据库表失败");
-//            disconnect();
-//            return false;
-//        }
+        if (!createTables()) {
+            LOG_ERROR("创建数据库表失败");
+            disconnect();
+            return false;
+        }
 
         return true;
 
@@ -105,12 +105,32 @@ bool DatabaseManager::createTables() {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     )";
 
+    std::string createDocumentSharesTable = R"(
+        CREATE TABLE IF NOT EXISTS document_shares (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            document_id INT NOT NULL,
+            shared_by_user_id INT NOT NULL,
+            shared_to_user_id INT NOT NULL,
+            shared_document_id INT NOT NULL,
+            shared_minio_key VARCHAR(500),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE,
+            FOREIGN KEY (shared_by_user_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (shared_to_user_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (shared_document_id) REFERENCES documents(id) ON DELETE CASCADE,
+            UNIQUE KEY unique_share (document_id, shared_by_user_id, shared_to_user_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    )";
+
     std::string createIndexes = R"(
         CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
         CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
         CREATE INDEX IF NOT EXISTS idx_documents_owner ON documents(owner_id);
         CREATE INDEX IF NOT EXISTS idx_documents_title ON documents(title);
         CREATE INDEX IF NOT EXISTS idx_documents_created ON documents(created_at);
+        CREATE INDEX IF NOT EXISTS idx_document_shares_shared_to ON document_shares(shared_to_user_id);
+        CREATE INDEX IF NOT EXISTS idx_document_shares_shared_by ON document_shares(shared_by_user_id);
+        CREATE INDEX IF NOT EXISTS idx_document_shares_document ON document_shares(document_id);
     )";
 
     // 创建users表
@@ -125,11 +145,17 @@ bool DatabaseManager::createTables() {
         return false;
     }
 
-    // 创建索引
-    if (mysql_query(db, createIndexes.c_str()) != 0) {
-        LOG_ERROR("创建索引失败: " + std::string(mysql_error(db)));
+    // 创建document_shares表
+    if (mysql_query(db, createDocumentSharesTable.c_str()) != 0) {
+        LOG_ERROR("创建document_shares表失败: " + std::string(mysql_error(db)));
         return false;
     }
+
+    // 创建索引
+    //if (mysql_query(db, createIndexes.c_str()) != 0) {
+    //    LOG_ERROR("创建索引失败: " + std::string(mysql_error(db)));
+    //    return false;
+    //}
 
     return true;
 }
@@ -502,6 +528,185 @@ Result<bool> DatabaseManager::deleteDocument(int docId) {
     }
     
     return Result<bool>::Success(true);
+}
+
+// Document sharing operations
+Result<DocumentShare> DatabaseManager::createDocumentShare(int documentId, int sharedByUserId, int sharedToUserId,
+                                                          int sharedDocumentId, const std::string& sharedMinioKey) {
+    std::lock_guard<std::recursive_mutex> lock(dbMutex);
+    if (!isConnected || db == nullptr) {
+        return Result<DocumentShare>::Error("数据库未连接");
+    }
+
+    std::string sql = "INSERT INTO document_shares (document_id, shared_by_user_id, shared_to_user_id, shared_document_id, shared_minio_key) VALUES (" +
+                      std::to_string(documentId) + ", " + std::to_string(sharedByUserId) + ", " +
+                      std::to_string(sharedToUserId) + ", " + std::to_string(sharedDocumentId) + ", '" +
+                      sharedMinioKey + "');";
+
+    if (mysql_query(db, sql.c_str()) != 0) {
+        return Result<DocumentShare>::Error("创建分享记录失败: " + std::string(mysql_error(db)));
+    }
+
+    // 获取新插入的分享记录ID
+    int shareId = (int)mysql_insert_id(db);
+
+    // 查询新创建的分享记录
+    std::string selectSql = "SELECT id, document_id, shared_by_user_id, shared_to_user_id, shared_document_id, shared_minio_key, created_at FROM document_shares WHERE id = " +
+                           std::to_string(shareId) + ";";
+
+    if (mysql_query(db, selectSql.c_str()) != 0) {
+        return Result<DocumentShare>::Error("查询分享记录失败: " + std::string(mysql_error(db)));
+    }
+
+    MYSQL_RES* result = mysql_store_result(db);
+    if (!result) {
+        return Result<DocumentShare>::Error("获取查询结果失败: " + std::string(mysql_error(db)));
+    }
+
+    MYSQL_ROW row = mysql_fetch_row(result);
+    if (!row) {
+        mysql_free_result(result);
+        return Result<DocumentShare>::Error("分享记录不存在");
+    }
+
+    DocumentShare share;
+    share.id = std::stoi(row[0]);
+    share.document_id = std::stoi(row[1]);
+    share.shared_by_user_id = std::stoi(row[2]);
+    share.shared_to_user_id = std::stoi(row[3]);
+    share.shared_document_id = std::stoi(row[4]);
+    share.shared_minio_key = row[5] ? row[5] : "";
+    share.created_at = Utils::parseTimestamp(row[6] ? row[6] : "");
+
+    mysql_free_result(result);
+    return Result<DocumentShare>::Success(share);
+}
+
+Result<std::vector<Document>> DatabaseManager::getSharedDocuments(int userId, int limit, int offset) {
+    std::lock_guard<std::recursive_mutex> lock(dbMutex);
+    if (!isConnected || db == nullptr) {
+        return Result<std::vector<Document>>::Error("数据库未连接");
+    }
+
+    std::string sql = "SELECT d.id, d.title, d.description, d.file_path, ds.shared_minio_key, d.owner_id, d.created_at, d.updated_at, d.file_size, d.content_type "
+                      "FROM documents d "
+                      "INNER JOIN document_shares ds ON d.id = ds.shared_document_id "
+                      "WHERE ds.shared_to_user_id = " + std::to_string(userId) +
+                      " LIMIT " + std::to_string(limit) + " OFFSET " + std::to_string(offset) + ";";
+
+    if (mysql_query(db, sql.c_str()) != 0) {
+        return Result<std::vector<Document>>::Error("查询分享文档失败: " + std::string(mysql_error(db)));
+    }
+
+    MYSQL_RES* result = mysql_store_result(db);
+    if (!result) {
+        return Result<std::vector<Document>>::Error("获取查询结果失败: " + std::string(mysql_error(db)));
+    }
+
+    std::vector<Document> documents;
+    MYSQL_ROW row;
+    while ((row = mysql_fetch_row(result))) {
+        Document doc;
+        doc.id = std::stoi(row[0]);
+        doc.title = row[1];
+        doc.description = row[2] ? row[2] : "";
+        doc.file_path = row[3] ? row[3] : "";
+        doc.minio_key = row[4] ? row[4] : "";  // 使用分享的minio_key
+        doc.owner_id = std::stoi(row[5]);
+        doc.created_at = Utils::parseTimestamp(row[6] ? row[6] : "");
+        doc.updated_at = Utils::parseTimestamp(row[7] ? row[7] : "");
+        doc.file_size = std::stoull(row[8] ? row[8] : "0");
+        doc.content_type = row[9] ? row[9] : "application/octet-stream";
+        documents.push_back(doc);
+    }
+
+    mysql_free_result(result);
+    return Result<std::vector<Document>>::Success(documents);
+}
+
+Result<std::vector<DocumentShare>> DatabaseManager::getDocumentShares(int documentId) {
+    std::lock_guard<std::recursive_mutex> lock(dbMutex);
+    if (!isConnected || db == nullptr) {
+        return Result<std::vector<DocumentShare>>::Error("数据库未连接");
+    }
+
+    std::string sql = "SELECT id, document_id, shared_by_user_id, shared_to_user_id, shared_document_id, shared_minio_key, created_at FROM document_shares WHERE document_id = " +
+                      std::to_string(documentId) + ";";
+
+    if (mysql_query(db, sql.c_str()) != 0) {
+        return Result<std::vector<DocumentShare>>::Error("查询分享记录失败: " + std::string(mysql_error(db)));
+    }
+
+    MYSQL_RES* result = mysql_store_result(db);
+    if (!result) {
+        return Result<std::vector<DocumentShare>>::Error("获取查询结果失败: " + std::string(mysql_error(db)));
+    }
+
+    std::vector<DocumentShare> shares;
+    MYSQL_ROW row;
+    while ((row = mysql_fetch_row(result))) {
+        DocumentShare share;
+        share.id = std::stoi(row[0]);
+        share.document_id = std::stoi(row[1]);
+        share.shared_by_user_id = std::stoi(row[2]);
+        share.shared_to_user_id = std::stoi(row[3]);
+        share.shared_document_id = std::stoi(row[4]);
+        share.shared_minio_key = row[5] ? row[5] : "";
+        share.created_at = Utils::parseTimestamp(row[6] ? row[6] : "");
+        shares.push_back(share);
+    }
+
+    mysql_free_result(result);
+    return Result<std::vector<DocumentShare>>::Success(shares);
+}
+
+Result<bool> DatabaseManager::deleteDocumentShare(int shareId) {
+    std::lock_guard<std::recursive_mutex> lock(dbMutex);
+    if (!isConnected || db == nullptr) {
+        return Result<bool>::Error("数据库未连接");
+    }
+
+    std::string sql = "DELETE FROM document_shares WHERE id = " + std::to_string(shareId) + ";";
+
+    if (mysql_query(db, sql.c_str()) != 0) {
+        return Result<bool>::Error("删除分享记录失败: " + std::string(mysql_error(db)));
+    }
+
+    if (mysql_affected_rows(db) == 0) {
+        return Result<bool>::Error("分享记录不存在");
+    }
+
+    return Result<bool>::Success(true);
+}
+
+Result<bool> DatabaseManager::isDocumentShared(int documentId, int sharedByUserId, int sharedToUserId) {
+    std::lock_guard<std::recursive_mutex> lock(dbMutex);
+    if (!isConnected || db == nullptr) {
+        return Result<bool>::Error("数据库未连接");
+    }
+
+    std::string sql = "SELECT COUNT(*) FROM document_shares WHERE document_id = " + std::to_string(documentId) +
+                      " AND shared_by_user_id = " + std::to_string(sharedByUserId) +
+                      " AND shared_to_user_id = " + std::to_string(sharedToUserId) + ";";
+
+    if (mysql_query(db, sql.c_str()) != 0) {
+        return Result<bool>::Error("查询分享记录失败: " + std::string(mysql_error(db)));
+    }
+
+    MYSQL_RES* result = mysql_store_result(db);
+    if (!result) {
+        return Result<bool>::Error("获取查询结果失败: " + std::string(mysql_error(db)));
+    }
+
+    MYSQL_ROW row = mysql_fetch_row(result);
+    bool exists = false;
+    if (row && row[0]) {
+        int count = std::stoi(row[0]);
+        exists = (count > 0);
+    }
+
+    mysql_free_result(result);
+    return Result<bool>::Success(exists);
 }
 
 Result<std::vector<User>> DatabaseManager::searchUsers(const std::string& query, int limit) {

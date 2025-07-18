@@ -38,6 +38,7 @@ private slots:
     void on_btnChangePasswordDialog_clicked();
     void on_btnQuit_clicked();
     void on_btnViewDocs_clicked();
+    void on_btnViewSharedDocs_clicked();
     void on_btnExportUsers_clicked();
     void on_btnDownloadUserTemplate_clicked();
     void on_btnImportUsers_clicked();

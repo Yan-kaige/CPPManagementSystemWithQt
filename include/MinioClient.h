@@ -63,6 +63,7 @@ public:
     Result<bool> getObject(const std::string& objectName, const std::string& filePath);
     Result<std::vector<uint8_t>> getObject(const std::string& objectName);
     Result<bool> removeObject(const std::string& objectName);
+    Result<bool> copyObject(const std::string& sourceObjectName, const std::string& destObjectName);
     Result<bool> objectExists(const std::string& objectName);
     Result<std::vector<std::string>> listObjects(const std::string& prefix = "");
 

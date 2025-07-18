@@ -300,6 +300,7 @@ void MainWindow::updateCurrentUserInfo()
     if (!g_cliHandler) {
         ui->labelCurrentUser->setText("未登录");
         ui->btnViewDocs->setVisible(false);
+        ui->btnViewSharedDocs->setVisible(false);
         // 未登录时只显示登录/注册页签
         ui->tabWidgetAuth->setVisible(true);
         ui->btnChangePasswordDialog->setVisible(false);
@@ -312,6 +313,7 @@ void MainWindow::updateCurrentUserInfo()
         const User& user = result.second;
         ui->labelCurrentUser->setText(QString("用户：%1\n邮箱：%2").arg(QString::fromUtf8(user.username), QString::fromUtf8(user.email)));
         ui->btnViewDocs->setVisible(true);
+        ui->btnViewSharedDocs->setVisible(true);
         // 登录后显示功能区，隐藏登录/注册页签
         ui->tabWidgetAuth->setVisible(false);
         ui->btnChangePasswordDialog->setVisible(true);
@@ -320,6 +322,7 @@ void MainWindow::updateCurrentUserInfo()
     } else {
         ui->labelCurrentUser->setText("未登录");
         ui->btnViewDocs->setVisible(false);
+        ui->btnViewSharedDocs->setVisible(false);
         // 未登录时只显示登录/注册页签
         ui->tabWidgetAuth->setVisible(true);
         ui->btnChangePasswordDialog->setVisible(false);
@@ -377,6 +380,21 @@ void MainWindow::on_btnViewDocs_clicked()
     int userId = userResult.second.id;
     std::vector<Document> docs = g_cliHandler->getUserDocsForUI(userId);
     DocListDialog dlg(docs, this);
+    dlg.exec();
+}
+
+void MainWindow::on_btnViewSharedDocs_clicked()
+{
+    if (!g_cliHandler) return;
+    auto userResult = g_cliHandler->getCurrentUserForUI();
+    if (!userResult.first) {
+        QMessageBox::warning(this, "查看分享文档", "请先登录！");
+        return;
+    }
+    int userId = userResult.second.id;
+    std::vector<Document> docs = g_cliHandler->getSharedDocsForUI(userId);
+    DocListDialog dlg(docs, this);
+    dlg.setWindowTitle("分享给我的文档");
     dlg.exec();
 }
 

@@ -56,6 +56,16 @@ struct Document {
     std::string content_type;
 };
 
+struct DocumentShare {
+    int id;
+    int document_id;
+    int shared_by_user_id;
+    int shared_to_user_id;
+    int shared_document_id;
+    std::string shared_minio_key;
+    std::chrono::system_clock::time_point created_at;
+};
+
 struct Session {
     int userId;
     std::string username;

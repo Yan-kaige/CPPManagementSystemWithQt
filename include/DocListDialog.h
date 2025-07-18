@@ -16,6 +16,7 @@ private slots:
     void onDownloadDocClicked();
     void onEditDocClicked();
     void onExportDocsClicked();
+    void onShareDocClicked();
 private:
     QTableWidget* tableWidget;
     std::vector<Document> currentDocs;

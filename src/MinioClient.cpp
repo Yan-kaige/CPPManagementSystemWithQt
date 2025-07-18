@@ -320,6 +320,31 @@ Result<bool> MinioClient::removeObject(const std::string& objectName) {
     }
 }
 
+Result<bool> MinioClient::copyObject(const std::string& sourceObjectName, const std::string& destObjectName) {
+    if (!initialized || !client) {
+        return Result<bool>::Error("Client not initialized");
+    }
+
+    try {
+        std::lock_guard<std::mutex> lock(clientMutex);
+
+        minio::s3::CopyObjectArgs args;
+        args.bucket = bucket;
+        args.object = destObjectName;
+
+        // Set source
+        minio::s3::CopySource source;
+        source.bucket = bucket;
+        source.object = sourceObjectName;
+        args.source = source;
+
+        client->CopyObject(args);
+        return Result<bool>::Success(true);
+    } catch (const minio::error::Error& err) {
+        return Result<bool>::Error("Copy object failed: " + std::string(err.String()));
+    }
+}
+
 Result<bool> MinioClient::objectExists(const std::string& objectName) {
     if (!initialized || !client) {
         return Result<bool>::Error("Client not initialized");

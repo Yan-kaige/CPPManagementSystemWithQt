@@ -365,6 +365,24 @@ void CLIHandler::registerAllCommands() {
         true,
         {"searchdocuments", "finddocs"}
     });
+    registerCommand({
+        "sharedoc",
+        "分享文档",
+        "sharedoc <文档ID> <目标用户名>",
+        {"sharedoc 1 john", "sharedoc 5 alice"},
+        [this](const std::vector<std::string>& args) { return handleShareDocument(args); },
+        true,
+        {"share", "sharedocument"}
+    });
+    registerCommand({
+        "listshared",
+        "查看分享给我的文档",
+        "listshared [数量] [偏移量]",
+        {"listshared", "listshared 10", "listshared 10 20"},
+        [this](const std::vector<std::string>& args) { return handleListSharedDocuments(args); },
+        true,
+        {"shareddocs", "myshared"}
+    });
     
     // 文件管理命令
     registerCommand({
@@ -1248,7 +1266,7 @@ bool CLIHandler::handleSearchDocuments(const std::vector<std::string>& args) {
         printError("用法: searchdocs <关键词>");
         return false;
     }
-    
+
     std::string query = args[1];
     auto result = dbManager->searchDocuments(query, 20);
     if (result.success) {
@@ -1256,15 +1274,196 @@ bool CLIHandler::handleSearchDocuments(const std::vector<std::string>& args) {
         qDebug() << QString::fromUtf8("搜索结果 (共 " + std::to_string(docs.size()) + " 个文档):");
         qDebug() << "ID\t标题\t\t\t大小\t\t创建时间\n";
         qDebug() << "------------------------------------------------\n";
-        
+
         for (const auto& doc : docs) {
-            qDebug() << doc.id << "\t" << doc.title.substr(0, 15) << "\t\t" 
-                      << doc.file_size << " bytes\t" 
+            qDebug() << doc.id << "\t" << doc.title.substr(0, 15) << "\t\t"
+                      << doc.file_size << " bytes\t"
                       << Utils::formatTimestamp(doc.created_at) +"\n";
         }
         return true;
     } else {
         printError("搜索失败: " + result.message);
+        return false;
+    }
+}
+
+bool CLIHandler::handleShareDocument(const std::vector<std::string>& args) {
+    if (args.size() < 3) {
+        printError("用法: sharedoc <文档ID> <目标用户名>");
+        return false;
+    }
+
+    // 解析参数
+    int docId;
+    try {
+        docId = std::stoi(args[1]);
+    } catch (const std::exception& e) {
+        printError("无效的文档ID");
+        return false;
+    }
+
+    std::string targetUsername = args[2];
+
+    // 获取当前用户
+    auto currentUserResult = authManager->getCurrentUser();
+    if (!currentUserResult.success) {
+        printError("请先登录");
+        return false;
+    }
+    User currentUser = currentUserResult.data.value();
+
+    // 获取目标用户
+    auto targetUserResult = dbManager->getUserByUsername(targetUsername);
+    if (!targetUserResult.success) {
+        printError("目标用户不存在: " + targetUserResult.message);
+        return false;
+    }
+    User targetUser = targetUserResult.data.value();
+
+    // 检查是否分享给自己
+    if (currentUser.id == targetUser.id) {
+        printError("不能分享给自己");
+        return false;
+    }
+
+    // 获取文档信息
+    auto docResult = dbManager->getDocumentById(docId);
+    if (!docResult.success) {
+        printError("文档不存在: " + docResult.message);
+        return false;
+    }
+    Document doc = docResult.data.value();
+
+    // 检查是否是文档所有者
+    if (doc.owner_id != currentUser.id) {
+        printError("您不是此文档的所有者，无法分享");
+        return false;
+    }
+
+    // 检查是否已经分享给该用户
+    auto isSharedResult = dbManager->isDocumentShared(docId, currentUser.id, targetUser.id);
+    if (!isSharedResult.success) {
+        printError("检查分享状态失败: " + isSharedResult.message);
+        return false;
+    }
+
+    if (isSharedResult.data.value()) {
+        printError("已经分享给该用户");
+        return false;
+    }
+
+    // 在MinIO中复制文件
+    std::string timestamp = Utils::getCurrentTimestamp();
+    std::string newMinioKey = "shared/" + std::to_string(targetUser.id) + "/" + timestamp + "_" + Utils::getFilename(doc.file_path);
+
+    if (minioClient && minioClient->isInitialized()) {
+        printInfo("正在复制文件到MinIO...");
+        printInfo("  源MinIO Key: " + doc.minio_key);
+        printInfo("  目标MinIO Key: " + newMinioKey);
+
+        auto copyResult = minioClient->copyObject(doc.minio_key, newMinioKey);
+        if (!copyResult.success) {
+            printError("文件复制失败: " + copyResult.message);
+            return false;
+        }
+
+        printSuccess("文件复制成功到MinIO: " + newMinioKey);
+    } else {
+        printWarning("MinIO客户端未初始化，跳过文件复制");
+        return false;
+    }
+
+    // 创建分享的文档记录
+    auto newDocResult = dbManager->createDocument(
+        doc.title + " (分享自 " + currentUser.username + ")",
+        doc.description,
+        doc.file_path,
+        newMinioKey,
+        targetUser.id,
+        doc.file_size,
+        doc.content_type
+    );
+
+    if (!newDocResult.success) {
+        printError("创建分享文档记录失败: " + newDocResult.message);
+        // 删除已复制的MinIO文件
+        minioClient->removeObject(newMinioKey);
+        return false;
+    }
+
+    Document newDoc = newDocResult.data.value();
+
+    // 创建分享记录
+    auto shareResult = dbManager->createDocumentShare(
+        docId,
+        currentUser.id,
+        targetUser.id,
+        newDoc.id,
+        newMinioKey
+    );
+
+    if (!shareResult.success) {
+        printError("创建分享记录失败: " + shareResult.message);
+        // 删除已创建的文档记录和MinIO文件
+        dbManager->deleteDocument(newDoc.id);
+        minioClient->removeObject(newMinioKey);
+        return false;
+    }
+
+    printSuccess("文档分享成功！");
+    printInfo("  文档ID: " + std::to_string(docId));
+    printInfo("  文档标题: " + doc.title);
+    printInfo("  分享给: " + targetUser.username);
+    return true;
+}
+
+bool CLIHandler::handleListSharedDocuments(const std::vector<std::string>& args) {
+    // 获取当前用户
+    auto currentUserResult = authManager->getCurrentUser();
+    if (!currentUserResult.success) {
+        printError("请先登录");
+        return false;
+    }
+    User currentUser = currentUserResult.data.value();
+
+    // 解析参数
+    int limit = 20;
+    int offset = 0;
+
+    if (args.size() > 1) {
+        try {
+            limit = std::stoi(args[1]);
+        } catch (const std::exception& e) {
+            printError("无效的数量参数");
+            return false;
+        }
+    }
+
+    if (args.size() > 2) {
+        try {
+            offset = std::stoi(args[2]);
+        } catch (const std::exception& e) {
+            printError("无效的偏移量参数");
+            return false;
+        }
+    }
+
+    // 获取分享给当前用户的文档
+    auto result = dbManager->getSharedDocuments(currentUser.id, limit, offset);
+    if (result.success) {
+        std::vector<Document> docs = result.data.value();
+        qDebug() << QString::fromUtf8("分享给我的文档 (共 " + std::to_string(docs.size()) + " 个):");
+        qDebug() << "ID\t标题\t\t\t大小\t\t分享时间\n";
+        qDebug() << "------------------------------------------------\n";
+
+        for (const auto& doc : docs) {
+            qDebug() << doc.id << "\t" << doc.title.substr(0, 15) << "\t\t"
+                      << doc.file_size << " bytes\t"
+                      << Utils::formatTimestamp(doc.created_at) +"\n";
+        }
+        return true;
+    } else {
+        printError("获取分享文档失败: " + result.message);
         return false;
     }
 }
@@ -1926,6 +2125,14 @@ std::pair<bool, User> CLIHandler::getCurrentUserForUI() {
 
 std::vector<Document> CLIHandler::getUserDocsForUI(int userId) {
     auto result = dbManager->getDocumentsByOwner(userId, 100, 0);
+    if (result.success) {
+        return result.data.value();
+    }
+    return {};
+}
+
+std::vector<Document> CLIHandler::getSharedDocsForUI(int userId) {
+    auto result = dbManager->getSharedDocuments(userId, 100, 0);
     if (result.success) {
         return result.data.value();
     }

@@ -202,7 +202,17 @@
     <item>
      <widget class="QPushButton" name="btnViewDocs">
       <property name="text">
-       <string>查看文档</string>
+       <string>我的文档</string>
+      </property>
+      <property name="visible">
+       <bool>false</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="btnViewSharedDocs">
+      <property name="text">
+       <string>分享给我的文档</string>
       </property>
       <property name="visible">
        <bool>false</bool>
