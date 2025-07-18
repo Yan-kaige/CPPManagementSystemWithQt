@@ -10,7 +10,8 @@
 #include <QHBoxLayout>
 #include <QMimeDatabase>
 #include <QMimeType>
-#include <QLabel> // Added for QLabel
+#include <QLabel>
+#include <QWidget>
 
 extern CLIHandler* g_cliHandler;
 
@@ -54,21 +55,43 @@ void DocListDialog::refreshDocs(const std::vector<Document>& docs)
 void DocListDialog::setupTable(const std::vector<Document>& docs)
 {
     tableWidget->clear();
-    tableWidget->setColumnCount(7);
+    tableWidget->setColumnCount(6);
     QStringList headers;
-    headers << "ID" << "标题" << "大小" << "创建时间" << "操作" << "下载" << "编辑";
+    headers << "ID" << "标题" << "描述" << "大小" << "创建时间" << "操作";
     tableWidget->setHorizontalHeaderLabels(headers);
     tableWidget->setRowCount(docs.size());
     for (int i = 0; i < docs.size(); ++i) {
         const Document& doc = docs[i];
         tableWidget->setItem(i, 0, new QTableWidgetItem(QString::number(doc.id)));
         tableWidget->setItem(i, 1, new QTableWidgetItem(QString::fromUtf8(doc.title)));
-        tableWidget->setItem(i, 2, new QTableWidgetItem(QString::number(doc.file_size) + " bytes"));
-        tableWidget->setItem(i, 3, new QTableWidgetItem(QString::fromUtf8(Utils::formatTimestamp(doc.created_at))));
+        tableWidget->setItem(i, 2, new QTableWidgetItem(QString::fromUtf8(doc.description)));
+
+        // 将文件大小转换为MB显示
+        double sizeInMB = static_cast<double>(doc.file_size) / (1024.0 * 1024.0);
+        QString sizeText;
+        if (sizeInMB < 0.01) {
+            sizeText = QString::number(doc.file_size) + " B";
+        } else if (sizeInMB < 1.0) {
+            double sizeInKB = static_cast<double>(doc.file_size) / 1024.0;
+            sizeText = QString::number(sizeInKB, 'f', 1) + " KB";
+        } else {
+            sizeText = QString::number(sizeInMB, 'f', 2) + " MB";
+        }
+        tableWidget->setItem(i, 3, new QTableWidgetItem(sizeText));
+        tableWidget->setItem(i, 4, new QTableWidgetItem(QString::fromUtf8(Utils::formatTimestamp(doc.created_at))));
+
+        // 创建操作按钮容器
+        QWidget* operationWidget = new QWidget();
+        QHBoxLayout* operationLayout = new QHBoxLayout(operationWidget);
+        operationLayout->setContentsMargins(2, 2, 2, 2);
+        operationLayout->setSpacing(2);
+
+        // 删除按钮
         QPushButton* btnDel = new QPushButton("删除");
+        btnDel->setMaximumWidth(50);
         btnDel->setProperty("docId", doc.id);
         connect(btnDel, &QPushButton::clicked, this, &DocListDialog::onDeleteDocClicked);
-        tableWidget->setCellWidget(i, 4, btnDel);
+
         // 下载按钮
         QString ext;
         if (!doc.content_type.empty()) {
@@ -78,18 +101,27 @@ void DocListDialog::setupTable(const std::vector<Document>& docs)
         }
         QString suggestedName = QString::fromUtf8(doc.title) + ext;
         QPushButton* btnDownload = new QPushButton("下载");
+        btnDownload->setMaximumWidth(50);
         btnDownload->setProperty("minioKey", QString::fromUtf8(doc.minio_key));
         btnDownload->setProperty("suggestedName", suggestedName);
         connect(btnDownload, &QPushButton::clicked, this, &DocListDialog::onDownloadDocClicked);
-        tableWidget->setCellWidget(i, 5, btnDownload);
+
         // 编辑按钮
         QPushButton* btnEdit = new QPushButton("编辑");
+        btnEdit->setMaximumWidth(50);
         btnEdit->setProperty("docId", doc.id);
         btnEdit->setProperty("title", QString::fromUtf8(doc.title));
         btnEdit->setProperty("desc", QString::fromUtf8(doc.description));
         btnEdit->setProperty("minioKey", QString::fromUtf8(doc.minio_key));
         connect(btnEdit, &QPushButton::clicked, this, &DocListDialog::onEditDocClicked);
-        tableWidget->setCellWidget(i, 6, btnEdit);
+
+        // 将按钮添加到布局
+        operationLayout->addWidget(btnDel);
+        operationLayout->addWidget(btnDownload);
+        operationLayout->addWidget(btnEdit);
+        operationLayout->addStretch();
+
+        tableWidget->setCellWidget(i, 5, operationWidget);
     }
     tableWidget->resizeColumnsToContents();
     tableWidget->horizontalHeader()->setStretchLastSection(true);
