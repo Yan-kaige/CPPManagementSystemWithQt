@@ -984,12 +984,18 @@ bool CLIHandler::handleAddDocument(const std::vector<std::string>& args) {
     std::ifstream fs(filePath, std::ios::binary | std::ios::ate);
     size_t fileSize = fs.is_open() ? static_cast<size_t>(fs.tellg()) : 0;
 
-    // 判断内容类型
-    std::string contentType = Utils::guessContentTypeByExtension(Utils::getFileExtension(filePath));
+    // 获取文件名（不包含路径）
+    std::string fileName = Utils::getFilename(filePath);
 
-    // 保存数据库记录
+    // 获取文件后缀名（不包含点号）
+    std::string fileExtension = Utils::getFileExtension(filePath);
+    if (!fileExtension.empty() && fileExtension[0] == '.') {
+        fileExtension = fileExtension.substr(1); // 移除点号
+    }
+
+    // 保存数据库记录 - file_path存储文件名，content_type存储后缀名
     auto result = dbManager->createDocument(
-        title, description, filePath, minioKey, currentUser.id, fileSize, contentType
+        title, description, fileName, minioKey, currentUser.id, fileSize, fileExtension
         );
 
     if (result.success) {
@@ -1331,11 +1337,11 @@ void CLIHandler::printDocument(const Document& doc) {
     qDebug() << QString::fromUtf8("\n=== 文档信息 === ID: " + std::to_string(doc.id)
         + " 标题: " + doc.title
         + " 描述: " + doc.description
-        + " 文件路径: " + doc.file_path
+        + " 文件名: " + doc.file_path
         + " MinIO键: " + doc.minio_key
         + " 所有者ID: " + std::to_string(doc.owner_id)
         + " 文件大小: " + std::to_string(doc.file_size) + " bytes"
-        + " 内容类型: " + doc.content_type
+        + " 文件后缀: " + doc.content_type
         + " 创建时间: " + Utils::formatTimestamp(doc.created_at)
         + " 更新时间: " + Utils::formatTimestamp(doc.updated_at)
         + "\n==================");
@@ -1892,7 +1898,7 @@ bool CLIHandler::handleExportDocsExcel(const std::string& username, const std::s
         return false;
     }
     // 写表头
-    file << "ID,标题,描述,文件路径,Minio键,所有者ID,创建时间,更新时间,文件大小,内容类型\n";
+    file << "ID,标题,描述,文件名,Minio键,所有者ID,创建时间,更新时间,文件大小,文件后缀\n";
     for (const auto& doc : docs) {
         file << doc.id << ","
              << '"' << doc.title << '"' << ","

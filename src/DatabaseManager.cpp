@@ -100,7 +100,7 @@ bool DatabaseManager::createTables() {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             file_size BIGINT DEFAULT 0,
-            content_type VARCHAR(100) DEFAULT 'application/octet-stream',
+            content_type VARCHAR(100) DEFAULT '',
             FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     )";
@@ -372,7 +372,7 @@ Result<Document> DatabaseManager::getDocumentById(int docId) {
         doc.created_at = std::chrono::system_clock::now();
         doc.updated_at = std::chrono::system_clock::now();
         doc.file_size = std::stoull(row[8] ? row[8] : "0");
-        doc.content_type = row[9] ? row[9] : "application/octet-stream";
+        doc.content_type = row[9] ? row[9] : "";
         
         mysql_free_result(result);
         return Result<Document>::Success(doc);
@@ -413,7 +413,7 @@ Result<std::vector<Document>> DatabaseManager::getDocumentsByOwner(int ownerId, 
         doc.created_at = Utils::parseTimestamp(row[6] ? row[6] : "");
         doc.updated_at = Utils::parseTimestamp(row[7] ? row[7] : "");
         doc.file_size = std::stoull(row[8] ? row[8] : "0");
-        doc.content_type = row[9] ? row[9] : "application/octet-stream";
+        doc.content_type = row[9] ? row[9] : "";
         documents.push_back(doc);
     }
     

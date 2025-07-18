@@ -321,7 +321,7 @@ Result<ExportResult> ImportExportManager::exportDocumentsToCSV(const std::string
         
         // 写入标题行
         if (includeHeader) {
-            file << "ID,标题,描述,文件路径,Minio键,所有者ID,创建时间,更新时间,文件大小,内容类型\n";
+            file << "ID,标题,描述,文件名,Minio键,所有者ID,创建时间,更新时间,文件大小,文件后缀\n";
         }
         
         // 写入数据行
@@ -465,9 +465,9 @@ Result<bool> ImportExportManager::generateDocumentTemplate(const std::string& fi
             return Result<bool>::Error("无法创建文件: " + filePath);
         }
         
-        file << "标题,描述,文件路径,所有者ID,文件大小,内容类型\n";
-        file << "示例文档,这是一个示例文档,/path/to/file.pdf,1,1024,application/pdf\n";
-        file << "测试文档,测试文档描述,/path/to/test.txt,1,512,text/plain\n";
+        file << "标题,描述,文件名,所有者ID,文件大小,文件后缀\n";
+        file << "示例文档,这是一个示例文档,file.pdf,1,1024,pdf\n";
+        file << "测试文档,测试文档描述,test.txt,1,512,txt\n";
         
         file.close();
         return Result<bool>::Success(true, "文档模板生成成功");

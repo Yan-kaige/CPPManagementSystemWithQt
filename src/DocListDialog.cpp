@@ -71,10 +71,8 @@ void DocListDialog::setupTable(const std::vector<Document>& docs)
         tableWidget->setCellWidget(i, 4, btnDel);
         // 下载按钮
         QString ext;
-        QMimeDatabase mimeDb;
-        QMimeType mime = mimeDb.mimeTypeForName(QString::fromUtf8(doc.content_type));
-        if (mime.isValid() && !mime.suffixes().isEmpty()) {
-            ext = "." + mime.suffixes().first();
+        if (!doc.content_type.empty()) {
+            ext = "." + QString::fromUtf8(doc.content_type);
         } else {
             ext = "";
         }
