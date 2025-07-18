@@ -36,6 +36,7 @@ public:
     QHBoxLayout *horizontalLayoutTop;
     QSpacerItem *horizontalSpacerTop;
     QLabel *labelCurrentUser;
+    QPushButton *btnLogout;
     QPushButton *btnQuit;
     QTabWidget *tabWidgetAuth;
     QWidget *tabLogin;
@@ -68,7 +69,6 @@ public:
     QLabel *labelConfirmPassword;
     QLineEdit *lineEditConfirmPassword;
     QPushButton *btnChangePassword;
-    QPushButton *btnLogout;
     QPushButton *btnViewDocs;
     QGroupBox *groupBoxUsers;
     QVBoxLayout *verticalLayoutUsers;
@@ -104,6 +104,11 @@ public:
         labelCurrentUser->setAlignment(Qt::AlignRight|Qt::AlignVCenter);
 
         horizontalLayoutTop->addWidget(labelCurrentUser);
+
+        btnLogout = new QPushButton(centralwidget);
+        btnLogout->setObjectName("btnLogout");
+
+        horizontalLayoutTop->addWidget(btnLogout);
 
         btnQuit = new QPushButton(centralwidget);
         btnQuit->setObjectName("btnQuit");
@@ -271,11 +276,6 @@ public:
 
         verticalLayout->addWidget(groupBoxChangePassword);
 
-        btnLogout = new QPushButton(centralwidget);
-        btnLogout->setObjectName("btnLogout");
-
-        verticalLayout->addWidget(btnLogout);
-
         btnViewDocs = new QPushButton(centralwidget);
         btnViewDocs->setObjectName("btnViewDocs");
         btnViewDocs->setVisible(false);
@@ -357,6 +357,7 @@ public:
     {
         MainWindow->setWindowTitle(QCoreApplication::translate("MainWindow", "MainWindow", nullptr));
         labelCurrentUser->setText(QCoreApplication::translate("MainWindow", "\346\234\252\347\231\273\345\275\225", nullptr));
+        btnLogout->setText(QCoreApplication::translate("MainWindow", "\347\231\273\345\207\272", nullptr));
         btnQuit->setText(QCoreApplication::translate("MainWindow", "\351\200\200\345\207\272", nullptr));
         labelUsername->setText(QCoreApplication::translate("MainWindow", "\347\224\250\346\210\267\345\220\215\357\274\232", nullptr));
         labelPassword->setText(QCoreApplication::translate("MainWindow", "\345\257\206\347\240\201\357\274\232", nullptr));
@@ -372,7 +373,6 @@ public:
         labelNewPassword->setText(QCoreApplication::translate("MainWindow", "\346\226\260\345\257\206\347\240\201\357\274\232", nullptr));
         labelConfirmPassword->setText(QCoreApplication::translate("MainWindow", "\347\241\256\350\256\244\346\226\260\345\257\206\347\240\201\357\274\232", nullptr));
         btnChangePassword->setText(QCoreApplication::translate("MainWindow", "\344\277\256\346\224\271", nullptr));
-        btnLogout->setText(QCoreApplication::translate("MainWindow", "\347\231\273\345\207\272", nullptr));
         btnViewDocs->setText(QCoreApplication::translate("MainWindow", "\346\237\245\347\234\213\346\226\207\346\241\243", nullptr));
         groupBoxUsers->setTitle(QCoreApplication::translate("MainWindow", "\347\224\250\346\210\267\345\210\227\350\241\250", nullptr));
         btnExportUsers->setText(QCoreApplication::translate("MainWindow", "\345\257\274\345\207\272\347\224\250\346\210\267", nullptr));

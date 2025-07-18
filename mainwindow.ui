@@ -41,6 +41,13 @@
        </widget>
       </item>
       <item>
+       <widget class="QPushButton" name="btnLogout">
+        <property name="text">
+         <string>登出</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QPushButton" name="btnQuit">
         <property name="text">
          <string>退出</string>
@@ -241,13 +248,7 @@
       </layout>
      </widget>
     </item>
-    <item>
-     <widget class="QPushButton" name="btnLogout">
-      <property name="text">
-       <string>登出</string>
-      </property>
-     </widget>
-    </item>
+
     <item>
      <widget class="QPushButton" name="btnViewDocs">
       <property name="text">

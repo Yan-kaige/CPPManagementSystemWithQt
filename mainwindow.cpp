@@ -8,6 +8,8 @@
 #include "DocListDialog.h"
 #include <QFileDialog>
 #include <QDebug>
+#include <QKeyEvent>
+#include <QShortcut>
 
 extern CLIHandler* g_cliHandler; // 假设有全局CLIHandler指针
 
@@ -22,11 +24,62 @@ MainWindow::MainWindow(QWidget *parent)
     ui->btnLogout->setVisible(false);
     ui->btnViewDocs->setVisible(false);
     ui->groupBoxUsers->setVisible(false);
+
+    // 设置登录按钮为默认按钮，这样回车键会触发它
+    ui->btnLogin->setDefault(true);
+
+    // 为登录页面的输入框安装事件过滤器
+    ui->lineEditUsername->installEventFilter(this);
+    ui->lineEditPassword->installEventFilter(this);
+
+    // 为注册页面的输入框安装事件过滤器
+    ui->lineEditRegisterUsername->installEventFilter(this);
+    ui->lineEditRegisterPassword->installEventFilter(this);
+    ui->lineEditRegisterEmail->installEventFilter(this);
+
+    // 创建快捷键：在登录页面按回车键触发登录
+    QShortcut *loginShortcut = new QShortcut(QKeySequence(Qt::Key_Return), ui->tabLogin);
+    connect(loginShortcut, &QShortcut::activated, this, &MainWindow::on_btnLogin_clicked);
+
+    QShortcut *loginShortcut2 = new QShortcut(QKeySequence(Qt::Key_Enter), ui->tabLogin);
+    connect(loginShortcut2, &QShortcut::activated, this, &MainWindow::on_btnLogin_clicked);
 }
 
 MainWindow::~MainWindow()
 {
     delete ui;
+}
+
+bool MainWindow::eventFilter(QObject *obj, QEvent *event)
+{
+    if (event->type() == QEvent::KeyPress) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
+
+        // 如果在用户名或密码输入框中按下回车键，触发登录
+        if ((obj == ui->lineEditUsername || obj == ui->lineEditPassword) &&
+            (keyEvent->key() == Qt::Key_Return || keyEvent->key() == Qt::Key_Enter)) {
+
+            // 只有在登录页面可见时才触发登录
+            if (ui->tabWidgetAuth->isVisible() && ui->tabWidgetAuth->currentWidget() == ui->tabLogin) {
+                on_btnLogin_clicked();
+                return true; // 事件已处理
+            }
+        }
+
+        // 如果在注册页面的输入框中按下回车键，触发注册
+        if ((obj == ui->lineEditRegisterUsername || obj == ui->lineEditRegisterPassword || obj == ui->lineEditRegisterEmail) &&
+            (keyEvent->key() == Qt::Key_Return || keyEvent->key() == Qt::Key_Enter)) {
+
+            // 只有在注册页面可见时才触发注册
+            if (ui->tabWidgetAuth->isVisible() && ui->tabWidgetAuth->currentWidget() == ui->tabRegister) {
+                on_btnRegisterUser_clicked();
+                return true; // 事件已处理
+            }
+        }
+    }
+
+    // 调用基类的事件过滤器
+    return QMainWindow::eventFilter(obj, event);
 }
 
 void MainWindow::on_btnLogin_clicked()
