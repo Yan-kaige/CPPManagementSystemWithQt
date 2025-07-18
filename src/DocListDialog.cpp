@@ -56,9 +56,9 @@ void DocListDialog::refreshDocs(const std::vector<Document>& docs)
 void DocListDialog::setupTable(const std::vector<Document>& docs)
 {
     tableWidget->clear();
-    tableWidget->setColumnCount(7);
+    tableWidget->setColumnCount(6);
     QStringList headers;
-    headers << "ID" << "标题" << "描述" << "大小" << "创建时间" << "操作" << "分享";
+    headers << "ID" << "标题" << "描述" << "大小" << "创建时间" << "操作";
     tableWidget->setHorizontalHeaderLabels(headers);
     tableWidget->setRowCount(docs.size());
     for (int i = 0; i < docs.size(); ++i) {
@@ -116,14 +116,6 @@ void DocListDialog::setupTable(const std::vector<Document>& docs)
         btnEdit->setProperty("minioKey", QString::fromUtf8(doc.minio_key));
         connect(btnEdit, &QPushButton::clicked, this, &DocListDialog::onEditDocClicked);
 
-        // 将按钮添加到布局
-        operationLayout->addWidget(btnDel);
-        operationLayout->addWidget(btnDownload);
-        operationLayout->addWidget(btnEdit);
-        operationLayout->addStretch();
-
-        tableWidget->setCellWidget(i, 5, operationWidget);
-
         // 分享按钮
         QPushButton* btnShare = new QPushButton("分享");
         btnShare->setMaximumWidth(50);
@@ -137,7 +129,14 @@ void DocListDialog::setupTable(const std::vector<Document>& docs)
         btnShare->setProperty("contentType", QString::fromUtf8(doc.content_type));
         connect(btnShare, &QPushButton::clicked, this, &DocListDialog::onShareDocClicked);
 
-        tableWidget->setCellWidget(i, 6, btnShare);
+        // 将按钮添加到布局
+        operationLayout->addWidget(btnDel);
+        operationLayout->addWidget(btnDownload);
+        operationLayout->addWidget(btnEdit);
+        operationLayout->addWidget(btnShare);
+        operationLayout->addStretch();
+
+        tableWidget->setCellWidget(i, 5, operationWidget);
     }
     tableWidget->resizeColumnsToContents();
     tableWidget->horizontalHeader()->setStretchLastSection(true);
