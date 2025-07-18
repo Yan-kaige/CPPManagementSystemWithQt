@@ -341,8 +341,8 @@ void CLIHandler::registerAllCommands() {
     registerCommand({
         "updatedoc",
         "更新文档信息",
-        "updatedoc <文档ID> <标题> <描述>",
-        {"updatedoc 1 \"新标题\" \"新描述\""},
+        "updatedoc <文档ID> <标题> <描述> [新文件路径]",
+        {"updatedoc 1 \"新标题\" \"新描述\"", "updatedoc 1 \"新标题\" \"新描述\" \"/path/to/newfile.pdf\""},
         [this](const std::vector<std::string>& args) { return handleUpdateDocument(args); },
         true,
         {"updatedocument", "editdoc"}
@@ -1090,10 +1090,10 @@ bool CLIHandler::handleListDocuments(const std::vector<std::string>& args) {
 
 bool CLIHandler::handleUpdateDocument(const std::vector<std::string>& args) {
     if (args.size() < 4) {
-        printError("用法: updatedoc <文档ID> <标题> <描述>");
+        printError("用法: updatedoc <文档ID> <标题> <描述> [新文件路径]");
         return false;
     }
-    
+
     int docId;
     try {
         docId = std::stoi(args[1]);
@@ -1101,22 +1101,93 @@ bool CLIHandler::handleUpdateDocument(const std::vector<std::string>& args) {
         printError("无效的文档ID");
         return false;
     }
-    
+
     std::string title = args[2];
     std::string description = args[3];
-    
+    std::string newFilePath = (args.size() > 4) ? args[4] : "";
+
     // 先获取原文档
     auto getResult = dbManager->getDocumentById(docId);
     if (!getResult.success) {
         printError("文档不存在: " + getResult.message);
         return false;
     }
-    
+
     Document doc = getResult.data.value();
     doc.title = title;
     doc.description = description;
     doc.updated_at = std::chrono::system_clock::now();
-    
+
+    // 如果提供了新文件路径，更新文件相关信息
+    if (!newFilePath.empty()) {
+        if (!Utils::fileExists(newFilePath)) {
+            printError("文件不存在: " + newFilePath);
+            return false;
+        }
+
+        // 获取当前用户信息
+        auto userResult = authManager->getCurrentUser();
+        if (!userResult.success) {
+            printError("请先登录");
+            return false;
+        }
+        User currentUser = userResult.data.value();
+
+        // 构建新的 MinIO 对象键
+        std::string filename = Utils::getFilename(newFilePath);
+        std::string timestamp = Utils::getCurrentTimestamp();
+        std::string newMinioKey = "documents/" + std::to_string(currentUser.id) + "/" + timestamp + "_" + filename;
+
+        // 上传新文件到 MinIO
+        if (minioClient && minioClient->isInitialized()) {
+            printInfo("正在上传新文件到MinIO...");
+            printInfo("  MinIO Key: " + newMinioKey);
+            printInfo("  Local File: " + newFilePath);
+
+            auto uploadResult = minioClient->putObject(newMinioKey, newFilePath);
+            if (!uploadResult.success) {
+                printError("新文件上传失败: " + uploadResult.message);
+                return false;
+            }
+
+            printSuccess("新文件上传成功到MinIO: " + newMinioKey);
+
+            // 删除旧文件（如果存在）
+            if (!doc.minio_key.empty()) {
+                auto deleteResult = minioClient->removeObject(doc.minio_key);
+                if (deleteResult.success) {
+                    printInfo("已删除旧文件: " + doc.minio_key);
+                } else {
+                    printWarning("删除旧文件失败: " + deleteResult.message);
+                }
+            }
+        } else {
+            printWarning("MinIO客户端未初始化，跳过文件上传");
+        }
+
+        // 获取新文件大小
+        std::ifstream fs(newFilePath, std::ios::binary | std::ios::ate);
+        size_t newFileSize = fs.is_open() ? static_cast<size_t>(fs.tellg()) : 0;
+
+        // 获取新文件名和后缀
+        std::string newFileName = Utils::getFilename(newFilePath);
+        std::string newFileExtension = Utils::getFileExtension(newFilePath);
+        if (!newFileExtension.empty() && newFileExtension[0] == '.') {
+            newFileExtension = newFileExtension.substr(1); // 移除点号
+        }
+
+        // 更新文档的文件相关字段
+        doc.file_path = newFileName;
+        doc.minio_key = newMinioKey;
+        doc.file_size = newFileSize;
+        doc.content_type = newFileExtension;
+
+        printInfo("文件信息已更新:");
+        printInfo("  文件名: " + newFileName);
+        printInfo("  文件大小: " + std::to_string(newFileSize) + " bytes");
+        printInfo("  文件后缀: " + newFileExtension);
+    }
+
     auto result = dbManager->updateDocument(doc);
     if (result.success) {
         printSuccess("文档更新成功");

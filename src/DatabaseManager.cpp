@@ -466,12 +466,12 @@ Result<bool> DatabaseManager::updateDocument(const Document& doc) {
         return Result<bool>::Error("数据库未连接");
     }
     
-    std::string sql = "UPDATE documents SET title = '" + doc.title + 
-                      "', description = '" + doc.description + 
-                      "', file_path = '" + doc.file_path + 
-                      "', minio_key = '" + doc.minio_key + 
-                      "', file_size = " + std::to_string(doc.file_size) + 
-                      ", content_type = '" + doc.content_type + 
+    std::string sql = "UPDATE documents SET title = '" + doc.title +
+                      "', description = '" + doc.description +
+                      "', file_path = '" + doc.file_path +
+                      "', minio_key = '" + doc.minio_key +
+                      "', file_size = " + std::to_string(doc.file_size) +
+                      ", content_type = '" + doc.content_type +
                       "' WHERE id = " + std::to_string(doc.id) + ";";
     
     if (mysql_query(db, sql.c_str()) != 0) {

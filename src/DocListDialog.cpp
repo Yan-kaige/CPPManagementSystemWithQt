@@ -246,14 +246,26 @@ void DocListDialog::onEditDocClicked()
     connect(btnUpdate, &QPushButton::clicked, [&]() {
         QString newTitle = editTitle->text().trimmed();
         QString newDesc = editDesc->text().trimmed();
+        QString newFile = editFile->text().trimmed();
+
         if (newTitle.isEmpty()) {
             QMessageBox::warning(&dlg, "提示", "标题不能为空！");
             return;
         }
+
+        // 构建参数列表，如果有新文件则包含文件路径
         std::vector<std::string> args = { "updatedoc", std::to_string(docId), newTitle.toUtf8().constData(), newDesc.toUtf8().constData() };
+        if (!newFile.isEmpty()) {
+            args.push_back(newFile.toUtf8().constData());
+        }
+
         bool ok = g_cliHandler->handleUpdateDocument(args);
         if (ok) {
-            QMessageBox::information(&dlg, "成功", "文档信息已更新！");
+            QString message = "文档信息已更新！";
+            if (!newFile.isEmpty()) {
+                message += "\n新文件已上传。";
+            }
+            QMessageBox::information(&dlg, "成功", message);
             dlg.accept();
             // 刷新文档列表
             auto userResult = g_cliHandler->getCurrentUserForUI();
