@@ -74,6 +74,15 @@ public:
     void run();
     void shutdown();
 
+    // 获取MinioClient
+    MinioClient* getMinioClient() const { return minioClient.get(); }
+
+    // 获取DatabaseManager
+    DatabaseManager* getDbManager() const { return dbManager.get(); }
+
+    // 获取AuthManager
+    AuthManager* getAuthManager() const { return authManager.get(); }
+
     // 命令注册
     void registerCommand(const Command& command);
     void registerAllCommands();

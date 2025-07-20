@@ -3,14 +3,29 @@
 #include <QMessageBox>
 #include "CLIHandler.h"
 #include "DatabaseManager.h" // 为了 User 结构体
+#include "Common.h" // 为了 Document 结构体
 #include <QPushButton>
 #include <QApplication>
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QTableWidget>
+#include <QHeaderView>
+#include <QLineEdit>
+#include <QDialog>
+#include <QLabel>
+#include <QTextEdit>
+#include <QFileInfo>
+#include <QComboBox>
+#include "AuthManager.h"
 #include "DocListDialog.h"
 #include "ChangePasswordDialog.h"
+#include "ShareDocumentDialog.h"
 #include <QFileDialog>
 #include <QDebug>
 #include <QKeyEvent>
 #include <QShortcut>
+#include <QDateTime>
+#include <QInputDialog>
 
 extern CLIHandler* g_cliHandler; // 假设有全局CLIHandler指针
 
@@ -119,7 +134,6 @@ void MainWindow::on_btnLogin_clicked()
         std::vector<std::string> args = { "login", username.toUtf8().constData(), password.toUtf8().constData() };
         bool ok = g_cliHandler->handleLogin(args);
         if (ok) {
-            QMessageBox::information(this, "登录", "登录成功");
             // 恢复欢迎页面的原始提示文字
             QLabel *welcomeDesc = findChild<QLabel*>("labelWelcomeDesc");
             if (welcomeDesc) {
@@ -172,45 +186,19 @@ void MainWindow::on_btnLogout_clicked()
 void MainWindow::updateUserList()
 {
     if (!g_cliHandler) {
-        QMessageBox::critical(this, "错误", "CLIHandler 未初始化");
         return;
     }
 
-    // 查找动态创建的用户表格
-    QTableWidget *tableUsers = findChild<QTableWidget*>("tableWidgetUsers");
-    if (!tableUsers) {
-        qDebug() << "用户表格未找到";
+    // 查找用户表格
+    QTableWidget *userTable = findChild<QTableWidget*>("tableWidgetUsers");
+    if (!userTable) {
         return;
     }
 
+    // 获取用户列表
     std::vector<User> users = g_cliHandler->getAllUsersForUI();
 
-    // 设置表头
-    tableUsers->clear();
-    tableUsers->setColumnCount(6);
-    QStringList headers;
-    headers << "ID" << "用户名" << "邮箱" << "状态" << "操作" << "状态操作";
-    tableUsers->setHorizontalHeaderLabels(headers);
-
-    // 填充数据
-    tableUsers->setRowCount(users.size());
-    for (int i = 0; i < users.size(); ++i) {
-        const User& user = users[i];
-        tableUsers->setItem(i, 0, new QTableWidgetItem(QString::number(user.id)));
-        tableUsers->setItem(i, 1, new QTableWidgetItem(QString::fromUtf8(user.username)));
-        tableUsers->setItem(i, 2, new QTableWidgetItem(QString::fromUtf8(user.email)));
-        tableUsers->setItem(i, 3, new QTableWidgetItem(user.is_active ? "激活" : "禁用"));
-        QPushButton* btnDel = new QPushButton("删除");
-        btnDel->setProperty("userId", user.id);
-        connect(btnDel, &QPushButton::clicked, this, &MainWindow::onDeleteUserClicked);
-        tableUsers->setCellWidget(i, 4, btnDel);
-        QPushButton* btnToggle = new QPushButton(user.is_active ? "禁用" : "激活");
-        btnToggle->setProperty("userId", user.id);
-        btnToggle->setProperty("isActive", user.is_active);
-        connect(btnToggle, &QPushButton::clicked, this, &MainWindow::onToggleUserActiveClicked);
-        tableUsers->setCellWidget(i, 5, btnToggle);
-    }
-    tableUsers->resizeColumnsToContents();
+    updateUserTableWithData(userTable, users);
 }
 
 void MainWindow::on_btnSearchUser_clicked()
@@ -789,81 +777,251 @@ void MainWindow::setupContentPages()
 {
     // 创建用户管理页面
     pageUserManagement = new QWidget();
+    pageUserManagement->setStyleSheet("QWidget { background-color: white; }");
     QVBoxLayout *userLayout = new QVBoxLayout(pageUserManagement);
+    userLayout->setContentsMargins(20, 20, 20, 20);
+    userLayout->setSpacing(15);
 
-    // 用户搜索区域
-    QHBoxLayout *searchLayout = new QHBoxLayout();
-    QLineEdit *searchUser = new QLineEdit();
-    searchUser->setObjectName("lineEditSearchUser");
-    searchUser->setPlaceholderText("输入用户名或邮箱关键词");
-    QPushButton *btnSearchUser = new QPushButton("搜索");
-    btnSearchUser->setObjectName("btnSearchUser");
+    // 页面标题
+    QLabel *userLabel = new QLabel("用户管理", this);
+    userLabel->setAlignment(Qt::AlignLeft);
+    userLabel->setStyleSheet("font-size: 24px; font-weight: bold; color: #333; margin-bottom: 10px;");
+    userLayout->addWidget(userLabel);
 
-    searchLayout->addWidget(searchUser);
-    searchLayout->addWidget(btnSearchUser);
-    userLayout->addLayout(searchLayout);
+    // 工具栏
+    QHBoxLayout *userToolbarLayout = new QHBoxLayout();
 
-    // 用户操作按钮
-    QHBoxLayout *userActionsLayout = new QHBoxLayout();
-    QPushButton *btnExportUsers = new QPushButton("导出用户");
+    // 搜索框
+    QLineEdit *searchEditUsers = new QLineEdit(this);
+    searchEditUsers->setObjectName("searchEditUsers");
+    searchEditUsers->setPlaceholderText("搜索用户名或邮箱...");
+    searchEditUsers->setMaximumWidth(300);
+    searchEditUsers->setStyleSheet("QLineEdit { border: 1px solid #ccc; padding: 8px 12px; border-radius: 4px; font-size: 14px; } QLineEdit:focus { border-color: #0078d4; }");
+
+    QPushButton *btnSearchUsers = new QPushButton("搜索", this);
+    btnSearchUsers->setObjectName("btnSearchUsers");
+    btnSearchUsers->setStyleSheet("QPushButton { background-color: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; } QPushButton:hover { background-color: #5a6268; }");
+    connect(btnSearchUsers, &QPushButton::clicked, this, &MainWindow::onSearchUsersClicked);
+
+    QPushButton *btnResetUsers = new QPushButton("重置", this);
+    btnResetUsers->setObjectName("btnResetUsers");
+    btnResetUsers->setStyleSheet("QPushButton { background-color: #17a2b8; color: white; border: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; } QPushButton:hover { background-color: #138496; }");
+    connect(btnResetUsers, &QPushButton::clicked, this, &MainWindow::onResetUsersClicked);
+
+    QPushButton *btnAddUser = new QPushButton("添加用户", this);
+    btnAddUser->setObjectName("btnAddUser");
+    btnAddUser->setStyleSheet("QPushButton { background-color: #0078d4; color: white; border: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; } QPushButton:hover { background-color: #106ebe; }");
+    connect(btnAddUser, &QPushButton::clicked, this, &MainWindow::onAddUserClicked);
+
+    QPushButton *btnExportUsers = new QPushButton("导出Excel", this);
     btnExportUsers->setObjectName("btnExportUsers");
-    QPushButton *btnDownloadTemplate = new QPushButton("下载导入模板");
-    btnDownloadTemplate->setObjectName("btnDownloadUserTemplate");
-    QPushButton *btnImportUsers = new QPushButton("导入用户");
-    btnImportUsers->setObjectName("btnImportUsers");
+    btnExportUsers->setStyleSheet("QPushButton { background-color: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; } QPushButton:hover { background-color: #218838; }");
+    connect(btnExportUsers, &QPushButton::clicked, this, &MainWindow::onExportUsersClicked);
 
-    userActionsLayout->addWidget(btnExportUsers);
-    userActionsLayout->addWidget(btnDownloadTemplate);
-    userActionsLayout->addWidget(btnImportUsers);
-    userActionsLayout->addStretch();
-    userLayout->addLayout(userActionsLayout);
+    userToolbarLayout->addWidget(searchEditUsers);
+    userToolbarLayout->addWidget(btnSearchUsers);
+    userToolbarLayout->addWidget(btnResetUsers);
+    userToolbarLayout->addWidget(btnAddUser);
+    userToolbarLayout->addWidget(btnExportUsers);
+    userToolbarLayout->addStretch();
+    userLayout->addLayout(userToolbarLayout);
 
-    // 用户表格
-    QTableWidget *tableUsers = new QTableWidget();
-    tableUsers->setObjectName("tableWidgetUsers");
-    userLayout->addWidget(tableUsers);
+    // 用户列表表格
+    QTableWidget *userTableWidget = new QTableWidget(this);
+    userTableWidget->setObjectName("tableWidgetUsers");
+    userTableWidget->setStyleSheet(
+        "QTableWidget { "
+            "border: 1px solid #d0d0d0; "
+            "border-radius: 5px; "
+            "background-color: white; "
+            "gridline-color: #e0e0e0; "
+            "selection-background-color: #e5f3ff; "
+        "}"
+        "QTableWidget::item { "
+            "padding: 8px; "
+            "border-bottom: 1px solid #f0f0f0; "
+            "min-height: 35px; "
+        "}"
+        "QTableWidget::item:selected { "
+            "background-color: #e5f3ff; "
+        "}"
+        "QHeaderView::section { "
+            "background-color: #f8f9fa; "
+            "border: none; "
+            "border-bottom: 2px solid #28a745; "
+            "padding: 10px; "
+            "font-weight: bold; "
+            "color: #333; "
+        "}"
+    );
+    // 设置默认行高
+    userTableWidget->verticalHeader()->setDefaultSectionSize(40);
+    userTableWidget->verticalHeader()->setVisible(false); // 隐藏行号
+    userLayout->addWidget(userTableWidget);
 
     stackedWidgetContent->addWidget(pageUserManagement);
 
     // 创建文档管理页面
     pageDocumentManagement = new QWidget();
+    pageDocumentManagement->setStyleSheet("QWidget { background-color: white; }");
     QVBoxLayout *docLayout = new QVBoxLayout(pageDocumentManagement);
+    docLayout->setContentsMargins(20, 20, 20, 20);
+    docLayout->setSpacing(15);
 
+    // 页面标题
     QLabel *docLabel = new QLabel("我的文档", this);
-    docLabel->setAlignment(Qt::AlignCenter);
-    docLabel->setStyleSheet("font-size: 18px; font-weight: bold; margin: 20px;");
+    docLabel->setAlignment(Qt::AlignLeft);
+    docLabel->setStyleSheet("font-size: 24px; font-weight: bold; color: #333; margin-bottom: 10px;");
     docLayout->addWidget(docLabel);
 
-    QPushButton *btnViewDocs = new QPushButton("查看我的文档", this);
-    btnViewDocs->setObjectName("btnViewDocs");
-    docLayout->addWidget(btnViewDocs);
+    // 工具栏
+    QHBoxLayout *toolbarLayout = new QHBoxLayout();
 
-    docLayout->addStretch();
+    // 搜索框
+    QLineEdit *searchEdit = new QLineEdit(this);
+    searchEdit->setObjectName("searchEditDocuments");
+    searchEdit->setPlaceholderText("搜索文档标题或描述...");
+    searchEdit->setMaximumWidth(300);
+    searchEdit->setStyleSheet("QLineEdit { border: 1px solid #ccc; padding: 8px 12px; border-radius: 4px; font-size: 14px; } QLineEdit:focus { border-color: #0078d4; }");
+
+    QPushButton *btnSearchDocs = new QPushButton("搜索", this);
+    btnSearchDocs->setObjectName("btnSearchDocuments");
+    btnSearchDocs->setStyleSheet("QPushButton { background-color: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; } QPushButton:hover { background-color: #5a6268; }");
+    connect(btnSearchDocs, &QPushButton::clicked, this, &MainWindow::onSearchDocumentsClicked);
+
+    QPushButton *btnResetDocs = new QPushButton("重置", this);
+    btnResetDocs->setObjectName("btnResetDocuments");
+    btnResetDocs->setStyleSheet("QPushButton { background-color: #17a2b8; color: white; border: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; } QPushButton:hover { background-color: #138496; }");
+    connect(btnResetDocs, &QPushButton::clicked, this, &MainWindow::onResetDocumentsClicked);
+
+    QPushButton *btnUploadDocPage = new QPushButton("上传文档", this);
+    btnUploadDocPage->setObjectName("btnUploadDocument");
+    btnUploadDocPage->setStyleSheet("QPushButton { background-color: #0078d4; color: white; border: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; } QPushButton:hover { background-color: #106ebe; }");
+    connect(btnUploadDocPage, &QPushButton::clicked, this, &MainWindow::onUploadDocumentClicked);
+
+    QPushButton *btnExportDocs = new QPushButton("导出Excel", this);
+    btnExportDocs->setObjectName("btnExportDocuments");
+    btnExportDocs->setStyleSheet("QPushButton { background-color: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; } QPushButton:hover { background-color: #218838; }");
+    connect(btnExportDocs, &QPushButton::clicked, this, &MainWindow::onExportDocumentsClicked);
+
+    toolbarLayout->addWidget(searchEdit);
+    toolbarLayout->addWidget(btnSearchDocs);
+    toolbarLayout->addWidget(btnResetDocs);
+    toolbarLayout->addWidget(btnUploadDocPage);
+    toolbarLayout->addWidget(btnExportDocs);
+    toolbarLayout->addStretch();
+    docLayout->addLayout(toolbarLayout);
+
+    // 文档列表表格
+    QTableWidget *docTableWidget = new QTableWidget(this);
+    docTableWidget->setObjectName("tableWidgetDocuments");
+    docTableWidget->setStyleSheet(
+        "QTableWidget { "
+            "border: 1px solid #d0d0d0; "
+            "border-radius: 5px; "
+            "background-color: white; "
+            "gridline-color: #e0e0e0; "
+            "selection-background-color: #e5f3ff; "
+        "}"
+        "QTableWidget::item { "
+            "padding: 8px; "
+            "border-bottom: 1px solid #f0f0f0; "
+            "min-height: 35px; "
+        "}"
+        "QTableWidget::item:selected { "
+            "background-color: #e5f3ff; "
+        "}"
+        "QHeaderView::section { "
+            "background-color: #f8f9fa; "
+            "border: none; "
+            "border-bottom: 2px solid #0078d4; "
+            "padding: 10px; "
+            "font-weight: bold; "
+            "color: #333; "
+        "}"
+    );
+    // 设置默认行高
+    docTableWidget->verticalHeader()->setDefaultSectionSize(40);
+    docTableWidget->verticalHeader()->setVisible(false); // 隐藏行号
+    docLayout->addWidget(docTableWidget);
+
     stackedWidgetContent->addWidget(pageDocumentManagement);
 
     // 创建分享文档页面
     pageSharedDocuments = new QWidget();
+    pageSharedDocuments->setStyleSheet("QWidget { background-color: white; }");
     QVBoxLayout *sharedLayout = new QVBoxLayout(pageSharedDocuments);
+    sharedLayout->setContentsMargins(20, 20, 20, 20);
+    sharedLayout->setSpacing(15);
 
+    // 页面标题
     QLabel *sharedLabel = new QLabel("分享给我的文档", this);
-    sharedLabel->setAlignment(Qt::AlignCenter);
-    sharedLabel->setStyleSheet("font-size: 18px; font-weight: bold; margin: 20px;");
+    sharedLabel->setAlignment(Qt::AlignLeft);
+    sharedLabel->setStyleSheet("font-size: 24px; font-weight: bold; color: #333; margin-bottom: 10px;");
     sharedLayout->addWidget(sharedLabel);
 
-    QPushButton *btnViewSharedDocs = new QPushButton("查看分享文档", this);
-    btnViewSharedDocs->setObjectName("btnViewSharedDocs");
-    sharedLayout->addWidget(btnViewSharedDocs);
+    // 工具栏
+    QHBoxLayout *sharedToolbarLayout = new QHBoxLayout();
 
-    sharedLayout->addStretch();
+    // 搜索框
+    QLineEdit *searchEditShared = new QLineEdit(this);
+    searchEditShared->setObjectName("searchEditSharedDocuments");
+    searchEditShared->setPlaceholderText("搜索分享文档...");
+    searchEditShared->setMaximumWidth(300);
+    searchEditShared->setStyleSheet("QLineEdit { border: 1px solid #ccc; padding: 8px 12px; border-radius: 4px; font-size: 14px; } QLineEdit:focus { border-color: #17a2b8; }");
+
+    QPushButton *btnSearchShared = new QPushButton("搜索", this);
+    btnSearchShared->setObjectName("btnSearchSharedDocuments");
+    btnSearchShared->setStyleSheet("QPushButton { background-color: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; } QPushButton:hover { background-color: #5a6268; }");
+    connect(btnSearchShared, &QPushButton::clicked, this, &MainWindow::onSearchSharedDocumentsClicked);
+
+    QPushButton *btnResetShared = new QPushButton("重置", this);
+    btnResetShared->setObjectName("btnResetSharedDocuments");
+    btnResetShared->setStyleSheet("QPushButton { background-color: #17a2b8; color: white; border: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; } QPushButton:hover { background-color: #138496; }");
+    connect(btnResetShared, &QPushButton::clicked, this, &MainWindow::onResetSharedDocumentsClicked);
+
+    sharedToolbarLayout->addWidget(searchEditShared);
+    sharedToolbarLayout->addWidget(btnSearchShared);
+    sharedToolbarLayout->addWidget(btnResetShared);
+    sharedToolbarLayout->addStretch();
+    sharedLayout->addLayout(sharedToolbarLayout);
+
+    // 分享文档列表表格
+    QTableWidget *sharedDocTableWidget = new QTableWidget(this);
+    sharedDocTableWidget->setObjectName("tableWidgetSharedDocuments");
+    sharedDocTableWidget->setStyleSheet(
+        "QTableWidget { "
+            "border: 1px solid #d0d0d0; "
+            "border-radius: 5px; "
+            "background-color: white; "
+            "gridline-color: #e0e0e0; "
+            "selection-background-color: #e5f3ff; "
+        "}"
+        "QTableWidget::item { "
+            "padding: 8px; "
+            "border-bottom: 1px solid #f0f0f0; "
+            "min-height: 35px; "
+        "}"
+        "QTableWidget::item:selected { "
+            "background-color: #e5f3ff; "
+        "}"
+        "QHeaderView::section { "
+            "background-color: #f8f9fa; "
+            "border: none; "
+            "border-bottom: 2px solid #17a2b8; "
+            "padding: 10px; "
+            "font-weight: bold; "
+            "color: #333; "
+        "}"
+    );
+    // 设置默认行高
+    sharedDocTableWidget->verticalHeader()->setDefaultSectionSize(60);
+    sharedDocTableWidget->verticalHeader()->setVisible(false); // 隐藏行号
+    sharedLayout->addWidget(sharedDocTableWidget);
+
     stackedWidgetContent->addWidget(pageSharedDocuments);
 
-    // 连接信号
-    connect(btnSearchUser, &QPushButton::clicked, this, &MainWindow::on_btnSearchUser_clicked);
-    connect(btnExportUsers, &QPushButton::clicked, this, &MainWindow::on_btnExportUsers_clicked);
-    connect(btnDownloadTemplate, &QPushButton::clicked, this, &MainWindow::on_btnDownloadUserTemplate_clicked);
-    connect(btnImportUsers, &QPushButton::clicked, this, &MainWindow::on_btnImportUsers_clicked);
-    connect(btnViewDocs, &QPushButton::clicked, this, &MainWindow::on_btnViewDocs_clicked);
-    connect(btnViewSharedDocs, &QPushButton::clicked, this, &MainWindow::on_btnViewSharedDocs_clicked);
+    // 按钮信号已在创建时连接
 }
 
 void MainWindow::onMenuItemClicked(QTreeWidgetItem *item, int column)
@@ -892,11 +1050,606 @@ void MainWindow::showUserManagementPage()
 void MainWindow::showDocumentManagementPage()
 {
     stackedWidgetContent->setCurrentWidget(pageDocumentManagement);
+    updateDocumentList();
 }
 
 void MainWindow::showSharedDocumentsPage()
 {
     stackedWidgetContent->setCurrentWidget(pageSharedDocuments);
+    updateSharedDocumentList();
+}
+
+void MainWindow::updateDocumentList()
+{
+    if (!g_cliHandler) {
+        return;
+    }
+
+    // 获取当前用户
+    auto currentUserResult = g_cliHandler->getCurrentUserForUI();
+    if (!currentUserResult.first) {
+        return;
+    }
+
+    User currentUser = currentUserResult.second;
+
+    // 查找文档表格
+    QTableWidget *docTable = findChild<QTableWidget*>("tableWidgetDocuments");
+    if (!docTable) {
+        return;
+    }
+
+    // 获取用户文档列表
+    std::vector<Document> docs = g_cliHandler->getUserDocsForUI(currentUser.id);
+
+    updateDocumentTableWithData(docTable, docs);
+}
+
+void MainWindow::updateSharedDocumentList()
+{
+    if (!g_cliHandler) {
+        return;
+    }
+
+    // 获取当前用户
+    auto currentUserResult = g_cliHandler->getCurrentUserForUI();
+    if (!currentUserResult.first) {
+        return;
+    }
+
+    User currentUser = currentUserResult.second;
+
+    // 查找分享文档表格
+    QTableWidget *sharedDocTable = findChild<QTableWidget*>("tableWidgetSharedDocuments");
+    if (!sharedDocTable) {
+        return;
+    }
+
+    // 获取分享给当前用户的文档列表
+    std::vector<Document> docs = g_cliHandler->getSharedDocsForUI(currentUser.id);
+
+    updateSharedDocumentTableWithData(sharedDocTable, docs);
+}
+
+void MainWindow::onUploadDocumentClicked()
+{
+    // 创建上传文档对话框
+    QDialog uploadDialog(this);
+    uploadDialog.setWindowTitle("上传文档");
+    uploadDialog.setModal(true);
+    uploadDialog.resize(400, 300);
+
+    QVBoxLayout *layout = new QVBoxLayout(&uploadDialog);
+
+    // 文件选择
+    QHBoxLayout *fileLayout = new QHBoxLayout();
+    QLabel *fileLabel = new QLabel("选择文件:");
+    QLineEdit *fileEdit = new QLineEdit();
+    fileEdit->setReadOnly(true);
+    QPushButton *browseBtn = new QPushButton("浏览...");
+
+    fileLayout->addWidget(fileLabel);
+    fileLayout->addWidget(fileEdit);
+    fileLayout->addWidget(browseBtn);
+    layout->addLayout(fileLayout);
+
+    // 文档标题
+    QHBoxLayout *titleLayout = new QHBoxLayout();
+    QLabel *titleLabel = new QLabel("文档标题:");
+    QLineEdit *titleEdit = new QLineEdit();
+    titleLayout->addWidget(titleLabel);
+    titleLayout->addWidget(titleEdit);
+    layout->addLayout(titleLayout);
+
+    // 文档描述
+    QVBoxLayout *descLayout = new QVBoxLayout();
+    QLabel *descLabel = new QLabel("文档描述:");
+    QTextEdit *descEdit = new QTextEdit();
+    descEdit->setMaximumHeight(100);
+    descLayout->addWidget(descLabel);
+    descLayout->addWidget(descEdit);
+    layout->addLayout(descLayout);
+
+    // 按钮
+    QHBoxLayout *buttonLayout = new QHBoxLayout();
+    QPushButton *okBtn = new QPushButton("上传");
+    QPushButton *cancelBtn = new QPushButton("取消");
+    buttonLayout->addStretch();
+    buttonLayout->addWidget(okBtn);
+    buttonLayout->addWidget(cancelBtn);
+    layout->addLayout(buttonLayout);
+
+    // 连接信号
+    connect(browseBtn, &QPushButton::clicked, [&]() {
+        QString fileName = QFileDialog::getOpenFileName(&uploadDialog, "选择要上传的文档", "", "所有文件 (*.*)");
+        if (!fileName.isEmpty()) {
+            fileEdit->setText(fileName);
+            // 自动填充标题（使用文件名）
+            QFileInfo fileInfo(fileName);
+            if (titleEdit->text().isEmpty()) {
+                titleEdit->setText(fileInfo.baseName());
+            }
+        }
+    });
+
+    connect(okBtn, &QPushButton::clicked, [&]() {
+        if (fileEdit->text().isEmpty()) {
+            QMessageBox::warning(&uploadDialog, "错误", "请选择要上传的文件");
+            return;
+        }
+        if (titleEdit->text().trimmed().isEmpty()) {
+            QMessageBox::warning(&uploadDialog, "错误", "请输入文档标题");
+            return;
+        }
+
+        std::vector<std::string> args = {
+            "adddoc",
+            titleEdit->text().toUtf8().toStdString(),
+            descEdit->toPlainText().toUtf8().toStdString(),
+            fileEdit->text().toUtf8().toStdString()
+        };
+        bool success = g_cliHandler->handleAddDocument(args);
+        if (success) {
+            QMessageBox::information(&uploadDialog, "上传成功", "文档已成功上传");
+            uploadDialog.accept();
+            updateDocumentList(); // 刷新列表
+        } else {
+            QMessageBox::warning(&uploadDialog, "上传失败", "上传文档时出现错误");
+        }
+    });
+
+    connect(cancelBtn, &QPushButton::clicked, [&]() {
+        uploadDialog.reject();
+    });
+
+    uploadDialog.exec();
+}
+
+void MainWindow::onSearchDocumentsClicked()
+{
+    QLineEdit *searchEdit = findChild<QLineEdit*>("searchEditDocuments");
+    if (!searchEdit) return;
+
+    QString keyword = searchEdit->text().trimmed();
+    if (keyword.isEmpty()) {
+        updateDocumentList(); // 如果搜索框为空，显示所有文档
+        return;
+    }
+
+    if (!g_cliHandler) return;
+
+    // 获取当前用户
+    auto currentUserResult = g_cliHandler->getCurrentUserForUI();
+    if (!currentUserResult.first) return;
+
+    User currentUser = currentUserResult.second;
+
+    // 搜索文档
+    std::vector<Document> docs = g_cliHandler->getSearchedDocsForUI(currentUser.id, keyword.toUtf8().toStdString());
+
+    // 更新表格显示
+    QTableWidget *docTable = findChild<QTableWidget*>("tableWidgetDocuments");
+    if (!docTable) return;
+
+    updateDocumentTableWithData(docTable, docs);
+}
+
+void MainWindow::onResetDocumentsClicked()
+{
+    // 清空搜索框
+    QLineEdit *searchEdit = findChild<QLineEdit*>("searchEditDocuments");
+    if (searchEdit) {
+        searchEdit->clear();
+    }
+
+    // 重新加载完整的文档列表
+    updateDocumentList();
+}
+
+void MainWindow::onExportDocumentsClicked()
+{
+    QString fileName = QFileDialog::getSaveFileName(this, "导出文档列表", "documents_export.xlsx", "Excel文件 (*.xlsx)");
+    if (!fileName.isEmpty()) {
+        if (g_cliHandler) {
+            // 获取当前用户
+            auto currentUserResult = g_cliHandler->getCurrentUserForUI();
+            if (currentUserResult.first) {
+                User currentUser = currentUserResult.second;
+                std::vector<std::string> args = {"export-docs-excel", fileName.toUtf8().toStdString(), "true"};
+                bool success = g_cliHandler->handleExportDocumentsExcel(args);
+                if (success) {
+                    QMessageBox::information(this, "导出成功", "文档列表已导出到: " + fileName);
+                } else {
+                    QMessageBox::warning(this, "导出失败", "导出文档列表时出现错误");
+                }
+            }
+        }
+    }
+}
+
+void MainWindow::onSearchSharedDocumentsClicked()
+{
+    QLineEdit *searchEdit = findChild<QLineEdit*>("searchEditSharedDocuments");
+    if (!searchEdit) return;
+
+    QString keyword = searchEdit->text().trimmed();
+    if (keyword.isEmpty()) {
+        updateSharedDocumentList(); // 如果搜索框为空，显示所有分享文档
+        return;
+    }
+
+    if (!g_cliHandler) return;
+
+    // 获取当前用户
+    auto currentUserResult = g_cliHandler->getCurrentUserForUI();
+    if (!currentUserResult.first) return;
+
+    User currentUser = currentUserResult.second;
+
+    // 获取分享文档并进行本地过滤
+    std::vector<Document> allDocs = g_cliHandler->getSharedDocsForUI(currentUser.id);
+    std::vector<Document> filteredDocs;
+
+    QString lowerKeyword = keyword.toLower();
+    for (const auto& doc : allDocs) {
+        QString title = QString::fromUtf8(doc.title).toLower();
+        QString desc = QString::fromUtf8(doc.description).toLower();
+        if (title.contains(lowerKeyword) || desc.contains(lowerKeyword)) {
+            filteredDocs.push_back(doc);
+        }
+    }
+
+    // 更新表格显示
+    QTableWidget *sharedDocTable = findChild<QTableWidget*>("tableWidgetSharedDocuments");
+    if (!sharedDocTable) return;
+
+    updateSharedDocumentTableWithData(sharedDocTable, filteredDocs);
+}
+
+void MainWindow::onResetSharedDocumentsClicked()
+{
+    // 清空搜索框
+    QLineEdit *searchEdit = findChild<QLineEdit*>("searchEditSharedDocuments");
+    if (searchEdit) {
+        searchEdit->clear();
+    }
+
+    // 重新加载完整的分享文档列表
+    updateSharedDocumentList();
+}
+
+void MainWindow::updateDocumentTableWithData(QTableWidget *table, const std::vector<Document>& docs)
+{
+    if (!table) return;
+
+    // 设置表头
+    table->clear();
+    table->setColumnCount(7);
+    QStringList headers;
+    headers << "ID" << "标题" << "描述" << "文件名" << "大小" << "创建时间" << "操作";
+    table->setHorizontalHeaderLabels(headers);
+
+    // 填充数据
+    table->setRowCount(docs.size());
+    for (int i = 0; i < docs.size(); ++i) {
+        const Document& doc = docs[i];
+
+        table->setItem(i, 0, new QTableWidgetItem(QString::number(doc.id)));
+        table->setItem(i, 1, new QTableWidgetItem(QString::fromUtf8(doc.title)));
+        table->setItem(i, 2, new QTableWidgetItem(QString::fromUtf8(doc.description)));
+        table->setItem(i, 3, new QTableWidgetItem(QString::fromUtf8(doc.file_path)));
+
+        // 格式化文件大小
+        QString sizeStr;
+        if (doc.file_size < 1024) {
+            sizeStr = QString::number(doc.file_size) + " B";
+        } else if (doc.file_size < 1024 * 1024) {
+            sizeStr = QString::number(doc.file_size / 1024.0, 'f', 1) + " KB";
+        } else {
+            sizeStr = QString::number(doc.file_size / (1024.0 * 1024.0), 'f', 1) + " MB";
+        }
+        table->setItem(i, 4, new QTableWidgetItem(sizeStr));
+
+        // 格式化创建时间
+        auto time_t = std::chrono::system_clock::to_time_t(doc.created_at);
+        QString timeStr = QDateTime::fromSecsSinceEpoch(time_t).toString("yyyy-MM-dd hh:mm");
+        table->setItem(i, 5, new QTableWidgetItem(timeStr));
+
+        // 操作按钮
+        QWidget *operationWidget = new QWidget();
+        QHBoxLayout *operationLayout = new QHBoxLayout(operationWidget);
+        operationLayout->setContentsMargins(3, 3, 3, 3);
+        operationLayout->setSpacing(2);
+
+        QPushButton *btnDownload = new QPushButton("下载");
+        btnDownload->setMinimumWidth(36);
+        btnDownload->setMaximumWidth(36);
+        btnDownload->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
+        btnDownload->setProperty("docId", doc.id);
+        btnDownload->setStyleSheet("QPushButton { background-color: #28a745; color: white; border: none; padding: 1px; border-radius: 2px; font-size: 10px; font-weight: bold; } QPushButton:hover { background-color: #218838; }");
+
+        QPushButton *btnEdit = new QPushButton("编辑");
+        btnEdit->setMinimumWidth(36);
+        btnEdit->setMaximumWidth(36);
+        btnEdit->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
+        btnEdit->setProperty("docId", doc.id);
+        btnEdit->setStyleSheet("QPushButton { background-color: #ffc107; color: #333; border: none; padding: 1px; border-radius: 2px; font-size: 10px; font-weight: bold; } QPushButton:hover { background-color: #e0a800; }");
+
+        QPushButton *btnDelete = new QPushButton("删除");
+        btnDelete->setMinimumWidth(36);
+        btnDelete->setMaximumWidth(36);
+        btnDelete->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
+        btnDelete->setProperty("docId", doc.id);
+        btnDelete->setStyleSheet("QPushButton { background-color: #dc3545; color: white; border: none; padding: 1px; border-radius: 2px; font-size: 10px; font-weight: bold; } QPushButton:hover { background-color: #c82333; }");
+
+        QPushButton *btnShare = new QPushButton("分享");
+        btnShare->setMinimumWidth(36);
+        btnShare->setMaximumWidth(36);
+        btnShare->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
+        btnShare->setProperty("docId", doc.id);
+        btnShare->setStyleSheet("QPushButton { background-color: #17a2b8; color: white; border: none; padding: 1px; border-radius: 2px; font-size: 10px; font-weight: bold; } QPushButton:hover { background-color: #138496; }");
+
+        // 连接信号
+        connect(btnDownload, &QPushButton::clicked, [this, doc]() {
+            QString defaultFileName = QString::fromUtf8(doc.file_path);
+            if (defaultFileName.isEmpty()) {
+                defaultFileName = QString::fromUtf8(doc.title);
+            }
+            QString fileName = QFileDialog::getSaveFileName(this, "保存文档", defaultFileName);
+            if (!fileName.isEmpty()) {
+                if (g_cliHandler && g_cliHandler->getMinioClient() && g_cliHandler->getMinioClient()->isInitialized()) {
+                    auto result = g_cliHandler->getMinioClient()->getObject(doc.minio_key, fileName.toUtf8().toStdString());
+                    if (result.success) {
+                        QMessageBox::information(this, "下载成功", "文档已保存到: " + fileName);
+                    } else {
+                        QMessageBox::warning(this, "下载失败", "下载文档时出现错误: " + QString::fromStdString(result.message));
+                    }
+                } else {
+                    QMessageBox::warning(this, "下载失败", "MinIO客户端未初始化");
+                }
+            }
+        });
+
+        connect(btnEdit, &QPushButton::clicked, [this, doc]() {
+            // 创建编辑文档对话框
+            QDialog editDialog(this);
+            editDialog.setWindowTitle("编辑文档");
+            editDialog.setModal(true);
+            editDialog.resize(450, 350);
+
+            QVBoxLayout *layout = new QVBoxLayout(&editDialog);
+
+            // 当前文件信息
+            QHBoxLayout *currentFileLayout = new QHBoxLayout();
+            QLabel *currentFileLabel = new QLabel("当前文件:");
+            QLineEdit *currentFileEdit = new QLineEdit(QString::fromUtf8(doc.file_path));
+            currentFileEdit->setReadOnly(true);
+            currentFileEdit->setStyleSheet("QLineEdit { background-color: #f0f0f0; }");
+            currentFileLayout->addWidget(currentFileLabel);
+            currentFileLayout->addWidget(currentFileEdit);
+            layout->addLayout(currentFileLayout);
+
+            // 新文件选择（可选）
+            QHBoxLayout *newFileLayout = new QHBoxLayout();
+            QLabel *newFileLabel = new QLabel("替换文件:");
+            QLineEdit *newFileEdit = new QLineEdit();
+            newFileEdit->setPlaceholderText("选择新文件替换当前文件（可选）");
+            QPushButton *browseBtn = new QPushButton("浏览...");
+            newFileLayout->addWidget(newFileLabel);
+            newFileLayout->addWidget(newFileEdit);
+            newFileLayout->addWidget(browseBtn);
+            layout->addLayout(newFileLayout);
+
+            // 文档标题
+            QHBoxLayout *titleLayout = new QHBoxLayout();
+            QLabel *titleLabel = new QLabel("文档标题:");
+            QLineEdit *titleEdit = new QLineEdit(QString::fromUtf8(doc.title));
+            titleLayout->addWidget(titleLabel);
+            titleLayout->addWidget(titleEdit);
+            layout->addLayout(titleLayout);
+
+            // 文档描述
+            QVBoxLayout *descLayout = new QVBoxLayout();
+            QLabel *descLabel = new QLabel("文档描述:");
+            QTextEdit *descEdit = new QTextEdit();
+            descEdit->setPlainText(QString::fromUtf8(doc.description));
+            descEdit->setMaximumHeight(100);
+            descLayout->addWidget(descLabel);
+            descLayout->addWidget(descEdit);
+            layout->addLayout(descLayout);
+
+            // 按钮
+            QHBoxLayout *buttonLayout = new QHBoxLayout();
+            QPushButton *okBtn = new QPushButton("保存");
+            QPushButton *cancelBtn = new QPushButton("取消");
+            buttonLayout->addStretch();
+            buttonLayout->addWidget(okBtn);
+            buttonLayout->addWidget(cancelBtn);
+            layout->addLayout(buttonLayout);
+
+            // 连接信号
+            connect(browseBtn, &QPushButton::clicked, [&]() {
+                QString fileName = QFileDialog::getOpenFileName(&editDialog, "选择新文件", "", "所有文件 (*.*)");
+                if (!fileName.isEmpty()) {
+                    newFileEdit->setText(fileName);
+                }
+            });
+
+            connect(okBtn, &QPushButton::clicked, [&]() {
+                if (titleEdit->text().trimmed().isEmpty()) {
+                    QMessageBox::warning(&editDialog, "错误", "请输入文档标题");
+                    return;
+                }
+
+                std::vector<std::string> args;
+                if (newFileEdit->text().trimmed().isEmpty()) {
+                    // 只更新标题和描述，不更换文件
+                    args = {
+                        "updatedoc",
+                        std::to_string(doc.id),
+                        titleEdit->text().toUtf8().toStdString(),
+                        descEdit->toPlainText().toUtf8().toStdString()
+                    };
+                } else {
+                    // 更新标题、描述和文件
+                    args = {
+                        "updatedoc",
+                        std::to_string(doc.id),
+                        titleEdit->text().toUtf8().toStdString(),
+                        descEdit->toPlainText().toUtf8().toStdString(),
+                        newFileEdit->text().toUtf8().toStdString()
+                    };
+                }
+
+                bool success = g_cliHandler->handleUpdateDocument(args);
+                if (success) {
+                    QString message = newFileEdit->text().trimmed().isEmpty() ?
+                        "文档信息已更新" : "文档信息和文件已更新";
+                    QMessageBox::information(&editDialog, "编辑成功", message);
+                    editDialog.accept();
+                    updateDocumentList();
+                } else {
+                    QMessageBox::warning(&editDialog, "编辑失败", "编辑文档时出现错误");
+                }
+            });
+
+            connect(cancelBtn, &QPushButton::clicked, [&]() {
+                editDialog.reject();
+            });
+
+            editDialog.exec();
+        });
+
+        connect(btnDelete, &QPushButton::clicked, [this, doc]() {
+            int ret = QMessageBox::question(this, "确认删除",
+                QString("确定要删除文档 \"%1\" 吗？").arg(QString::fromUtf8(doc.title)));
+            if (ret == QMessageBox::Yes) {
+                std::vector<std::string> args = {"deletedoc", std::to_string(doc.id)};
+                bool ok = g_cliHandler->handleDeleteDocument(args);
+                if (ok) {
+                    QMessageBox::information(this, "删除成功", "文档已删除");
+                    updateDocumentList();
+                } else {
+                    QMessageBox::warning(this, "删除失败", "删除文档时出现错误");
+                }
+            }
+        });
+
+        connect(btnShare, &QPushButton::clicked, [this, doc]() {
+            ShareDocumentDialog shareDialog(doc, this);
+            shareDialog.exec();
+        });
+
+        operationLayout->addWidget(btnDownload);
+        operationLayout->addWidget(btnEdit);
+        operationLayout->addWidget(btnDelete);
+        operationLayout->addWidget(btnShare);
+        operationLayout->addStretch();
+
+        table->setCellWidget(i, 6, operationWidget);
+    }
+
+    // 设置列宽
+    table->resizeColumnsToContents();
+    table->setColumnWidth(6, 190); // 操作列设置合适的固定宽度
+    table->horizontalHeader()->setStretchLastSection(false);
+    table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents); // ID列
+    table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch); // 标题列可拉伸
+    table->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch); // 描述列可拉伸
+    table->horizontalHeader()->setSectionResizeMode(3, QHeaderView::ResizeToContents); // 文件名列
+    table->horizontalHeader()->setSectionResizeMode(4, QHeaderView::ResizeToContents); // 大小列
+    table->horizontalHeader()->setSectionResizeMode(5, QHeaderView::ResizeToContents); // 时间列
+    table->horizontalHeader()->setSectionResizeMode(6, QHeaderView::Fixed); // 操作列固定
+}
+
+void MainWindow::updateSharedDocumentTableWithData(QTableWidget *table, const std::vector<Document>& docs)
+{
+    if (!table) return;
+
+    // 设置表头
+    table->clear();
+    table->setColumnCount(7);
+    QStringList headers;
+    headers << "ID" << "标题" << "描述" << "文件名" << "大小" << "分享时间" << "操作";
+    table->setHorizontalHeaderLabels(headers);
+
+    // 填充数据
+    table->setRowCount(docs.size());
+    for (int i = 0; i < docs.size(); ++i) {
+        const Document& doc = docs[i];
+
+        table->setItem(i, 0, new QTableWidgetItem(QString::number(doc.id)));
+        table->setItem(i, 1, new QTableWidgetItem(QString::fromUtf8(doc.title)));
+        table->setItem(i, 2, new QTableWidgetItem(QString::fromUtf8(doc.description)));
+        table->setItem(i, 3, new QTableWidgetItem(QString::fromUtf8(doc.file_path)));
+
+        // 格式化文件大小
+        QString sizeStr;
+        if (doc.file_size < 1024) {
+            sizeStr = QString::number(doc.file_size) + " B";
+        } else if (doc.file_size < 1024 * 1024) {
+            sizeStr = QString::number(doc.file_size / 1024.0, 'f', 1) + " KB";
+        } else {
+            sizeStr = QString::number(doc.file_size / (1024.0 * 1024.0), 'f', 1) + " MB";
+        }
+        table->setItem(i, 4, new QTableWidgetItem(sizeStr));
+
+        // 格式化分享时间
+        auto time_t = std::chrono::system_clock::to_time_t(doc.created_at);
+        QString timeStr = QDateTime::fromSecsSinceEpoch(time_t).toString("yyyy-MM-dd hh:mm");
+        table->setItem(i, 5, new QTableWidgetItem(timeStr));
+
+        // 操作按钮（分享的文档只能下载）
+        QWidget *operationWidget = new QWidget();
+        QHBoxLayout *operationLayout = new QHBoxLayout(operationWidget);
+        operationLayout->setContentsMargins(3, 3, 3, 3);
+        operationLayout->setSpacing(2);
+
+        QPushButton *btnDownload = new QPushButton("下载");
+        btnDownload->setMinimumWidth(60);
+        btnDownload->setMaximumWidth(60);
+        btnDownload->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
+        btnDownload->setProperty("docId", doc.id);
+        btnDownload->setStyleSheet("QPushButton { background-color: #28a745; color: white; border: none; padding: 2px; border-radius: 3px; font-size: 11px; font-weight: bold; } QPushButton:hover { background-color: #218838; }");
+
+        // 连接下载信号
+        connect(btnDownload, &QPushButton::clicked, [this, doc]() {
+            QString defaultFileName = QString::fromUtf8(doc.file_path);
+            if (defaultFileName.isEmpty()) {
+                defaultFileName = QString::fromUtf8(doc.title);
+            }
+            QString fileName = QFileDialog::getSaveFileName(this, "保存文档", defaultFileName);
+            if (!fileName.isEmpty()) {
+                if (g_cliHandler && g_cliHandler->getMinioClient() && g_cliHandler->getMinioClient()->isInitialized()) {
+                    auto result = g_cliHandler->getMinioClient()->getObject(doc.minio_key, fileName.toUtf8().toStdString());
+                    if (result.success) {
+                        QMessageBox::information(this, "下载成功", "文档已保存到: " + fileName);
+                    } else {
+                        QMessageBox::warning(this, "下载失败", "下载文档时出现错误: " + QString::fromStdString(result.message));
+                    }
+                } else {
+                    QMessageBox::warning(this, "下载失败", "MinIO客户端未初始化");
+                }
+            }
+        });
+
+        operationLayout->addWidget(btnDownload);
+        operationLayout->addStretch();
+
+        table->setCellWidget(i, 6, operationWidget);
+    }
+
+    // 设置列宽
+    table->resizeColumnsToContents();
+    table->setColumnWidth(6, 100); // 操作列设置更宽的固定宽度
+    table->horizontalHeader()->setStretchLastSection(false);
+    table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents); // ID列
+    table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch); // 标题列可拉伸
+    table->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch); // 描述列可拉伸
+    table->horizontalHeader()->setSectionResizeMode(3, QHeaderView::ResizeToContents); // 文件名列
+    table->horizontalHeader()->setSectionResizeMode(4, QHeaderView::ResizeToContents); // 大小列
+    table->horizontalHeader()->setSectionResizeMode(5, QHeaderView::ResizeToContents); // 时间列
+    table->horizontalHeader()->setSectionResizeMode(6, QHeaderView::Fixed); // 操作列固定
 }
 
 
@@ -1031,6 +1784,347 @@ void MainWindow::on_btnImportUsers_clicked()
     } else {
         QMessageBox::warning(this, "导入失败", "用户数据导入失败，请检查文件格式或内容。");
     }
+}
+
+// 新的用户管理方法
+void MainWindow::onSearchUsersClicked()
+{
+    QLineEdit *searchEdit = findChild<QLineEdit*>("searchEditUsers");
+    if (!searchEdit) return;
+
+    QString keyword = searchEdit->text().trimmed();
+    if (keyword.isEmpty()) {
+        updateUserList(); // 如果搜索框为空，显示所有用户
+        return;
+    }
+
+    if (!g_cliHandler) return;
+
+    // 搜索用户
+    std::vector<User> users = g_cliHandler->getSearchedUsersForUI(keyword.toUtf8().toStdString());
+
+    // 更新表格显示
+    QTableWidget *userTable = findChild<QTableWidget*>("tableWidgetUsers");
+    if (!userTable) return;
+
+    updateUserTableWithData(userTable, users);
+}
+
+void MainWindow::onResetUsersClicked()
+{
+    // 清空搜索框
+    QLineEdit *searchEdit = findChild<QLineEdit*>("searchEditUsers");
+    if (searchEdit) {
+        searchEdit->clear();
+    }
+
+    // 重新加载完整的用户列表
+    updateUserList();
+}
+
+void MainWindow::onAddUserClicked()
+{
+    // 创建添加用户对话框
+    QDialog addDialog(this);
+    addDialog.setWindowTitle("添加用户");
+    addDialog.setModal(true);
+    addDialog.resize(400, 300);
+
+    QVBoxLayout *layout = new QVBoxLayout(&addDialog);
+
+    // 用户名
+    QHBoxLayout *usernameLayout = new QHBoxLayout();
+    QLabel *usernameLabel = new QLabel("用户名:");
+    QLineEdit *usernameEdit = new QLineEdit();
+    usernameLayout->addWidget(usernameLabel);
+    usernameLayout->addWidget(usernameEdit);
+    layout->addLayout(usernameLayout);
+
+    // 密码
+    QHBoxLayout *passwordLayout = new QHBoxLayout();
+    QLabel *passwordLabel = new QLabel("密码:");
+    QLineEdit *passwordEdit = new QLineEdit();
+    passwordEdit->setEchoMode(QLineEdit::Password);
+    passwordLayout->addWidget(passwordLabel);
+    passwordLayout->addWidget(passwordEdit);
+    layout->addLayout(passwordLayout);
+
+    // 邮箱
+    QHBoxLayout *emailLayout = new QHBoxLayout();
+    QLabel *emailLabel = new QLabel("邮箱:");
+    QLineEdit *emailEdit = new QLineEdit();
+    emailLayout->addWidget(emailLabel);
+    emailLayout->addWidget(emailEdit);
+    layout->addLayout(emailLayout);
+
+    // 状态
+    QHBoxLayout *statusLayout = new QHBoxLayout();
+    QLabel *statusLabel = new QLabel("状态:");
+    QComboBox *statusCombo = new QComboBox();
+    statusCombo->addItem("激活", true);
+    statusCombo->addItem("禁用", false);
+    statusCombo->setCurrentIndex(0); // 默认激活
+    statusLayout->addWidget(statusLabel);
+    statusLayout->addWidget(statusCombo);
+    layout->addLayout(statusLayout);
+
+    // 按钮
+    QHBoxLayout *buttonLayout = new QHBoxLayout();
+    QPushButton *okBtn = new QPushButton("添加");
+    QPushButton *cancelBtn = new QPushButton("取消");
+    buttonLayout->addStretch();
+    buttonLayout->addWidget(okBtn);
+    buttonLayout->addWidget(cancelBtn);
+    layout->addLayout(buttonLayout);
+
+    connect(okBtn, &QPushButton::clicked, [&]() {
+        if (usernameEdit->text().trimmed().isEmpty()) {
+            QMessageBox::warning(&addDialog, "错误", "请输入用户名");
+            return;
+        }
+        if (passwordEdit->text().isEmpty()) {
+            QMessageBox::warning(&addDialog, "错误", "请输入密码");
+            return;
+        }
+        if (emailEdit->text().trimmed().isEmpty()) {
+            QMessageBox::warning(&addDialog, "错误", "请输入邮箱");
+            return;
+        }
+
+        std::vector<std::string> args = {
+            "register",
+            usernameEdit->text().toUtf8().toStdString(),
+            passwordEdit->text().toUtf8().toStdString(),
+            emailEdit->text().toUtf8().toStdString()
+        };
+        bool success = g_cliHandler->handleRegister(args);
+        if (success) {
+            // 如果需要设置为禁用状态
+            if (!statusCombo->currentData().toBool()) {
+                // 获取刚创建的用户并设置为禁用状态
+                auto userResult = g_cliHandler->getDbManager()->getUserByUsername(usernameEdit->text().toUtf8().toStdString());
+                if (userResult.success) {
+                    User newUser = userResult.data.value();
+                    newUser.is_active = false;
+                    g_cliHandler->getDbManager()->updateUser(newUser);
+                }
+            }
+            QMessageBox::information(&addDialog, "添加成功", "用户已成功添加");
+            addDialog.accept();
+            updateUserList();
+        } else {
+            QMessageBox::warning(&addDialog, "添加失败", "添加用户时出现错误，可能用户名或邮箱已存在");
+        }
+    });
+
+    connect(cancelBtn, &QPushButton::clicked, [&]() {
+        addDialog.reject();
+    });
+
+    addDialog.exec();
+}
+
+void MainWindow::onExportUsersClicked()
+{
+    QString fileName = QFileDialog::getSaveFileName(this, "导出用户列表", "users_export.xlsx", "Excel文件 (*.xlsx)");
+    if (!fileName.isEmpty()) {
+        if (g_cliHandler) {
+            std::vector<std::string> args = {"export-users-excel", fileName.toUtf8().toStdString()};
+            bool success = g_cliHandler->handleExportUsersExcel(args);
+            if (success) {
+                QMessageBox::information(this, "导出成功", "用户列表已导出到: " + fileName);
+            } else {
+                QMessageBox::warning(this, "导出失败", "导出用户列表时出现错误");
+            }
+        }
+    }
+}
+
+void MainWindow::updateUserTableWithData(QTableWidget *table, const std::vector<User>& users)
+{
+    if (!table) return;
+
+    // 设置表头
+    table->clear();
+    table->setColumnCount(6);
+    QStringList headers;
+    headers << "ID" << "用户名" << "邮箱" << "状态" << "创建时间" << "操作";
+    table->setHorizontalHeaderLabels(headers);
+
+    // 填充数据
+    table->setRowCount(users.size());
+    for (int i = 0; i < users.size(); ++i) {
+        const User& user = users[i];
+
+        table->setItem(i, 0, new QTableWidgetItem(QString::number(user.id)));
+        table->setItem(i, 1, new QTableWidgetItem(QString::fromUtf8(user.username)));
+        table->setItem(i, 2, new QTableWidgetItem(QString::fromUtf8(user.email)));
+
+        // 状态显示
+        QString statusStr = user.is_active ? "激活" : "禁用";
+        table->setItem(i, 3, new QTableWidgetItem(statusStr));
+
+        // 格式化创建时间
+        auto time_t = std::chrono::system_clock::to_time_t(user.created_at);
+        QString timeStr = QDateTime::fromSecsSinceEpoch(time_t).toString("yyyy-MM-dd hh:mm");
+        table->setItem(i, 4, new QTableWidgetItem(timeStr));
+
+        // 操作按钮
+        QWidget *operationWidget = new QWidget();
+        QHBoxLayout *operationLayout = new QHBoxLayout(operationWidget);
+        operationLayout->setContentsMargins(3, 3, 3, 3);
+        operationLayout->setSpacing(2);
+
+        QPushButton *btnEdit = new QPushButton("编辑");
+        btnEdit->setMinimumWidth(36);
+        btnEdit->setMaximumWidth(36);
+        btnEdit->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
+        btnEdit->setProperty("userId", user.id);
+        btnEdit->setStyleSheet("QPushButton { background-color: #ffc107; color: #333; border: none; padding: 1px; border-radius: 2px; font-size: 10px; font-weight: bold; } QPushButton:hover { background-color: #e0a800; }");
+
+        QPushButton *btnDelete = new QPushButton("删除");
+        btnDelete->setMinimumWidth(36);
+        btnDelete->setMaximumWidth(36);
+        btnDelete->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
+        btnDelete->setProperty("userId", user.id);
+        btnDelete->setStyleSheet("QPushButton { background-color: #dc3545; color: white; border: none; padding: 1px; border-radius: 2px; font-size: 10px; font-weight: bold; } QPushButton:hover { background-color: #c82333; }");
+
+        QPushButton *btnResetPwd = new QPushButton("重置");
+        btnResetPwd->setMinimumWidth(36);
+        btnResetPwd->setMaximumWidth(36);
+        btnResetPwd->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
+        btnResetPwd->setProperty("userId", user.id);
+        btnResetPwd->setStyleSheet("QPushButton { background-color: #17a2b8; color: white; border: none; padding: 1px; border-radius: 2px; font-size: 10px; font-weight: bold; } QPushButton:hover { background-color: #138496; }");
+
+        // 连接信号
+        connect(btnEdit, &QPushButton::clicked, [this, user]() {
+            // 编辑用户对话框
+            QDialog editDialog(this);
+            editDialog.setWindowTitle("编辑用户");
+            editDialog.setModal(true);
+            editDialog.resize(400, 300);
+
+            QVBoxLayout *layout = new QVBoxLayout(&editDialog);
+
+            // 用户名
+            QHBoxLayout *usernameLayout = new QHBoxLayout();
+            QLabel *usernameLabel = new QLabel("用户名:");
+            QLineEdit *usernameEdit = new QLineEdit(QString::fromUtf8(user.username));
+            usernameLayout->addWidget(usernameLabel);
+            usernameLayout->addWidget(usernameEdit);
+            layout->addLayout(usernameLayout);
+
+            // 邮箱
+            QHBoxLayout *emailLayout = new QHBoxLayout();
+            QLabel *emailLabel = new QLabel("邮箱:");
+            QLineEdit *emailEdit = new QLineEdit(QString::fromUtf8(user.email));
+            emailLayout->addWidget(emailLabel);
+            emailLayout->addWidget(emailEdit);
+            layout->addLayout(emailLayout);
+
+            // 状态
+            QHBoxLayout *statusLayout = new QHBoxLayout();
+            QLabel *statusLabel = new QLabel("状态:");
+            QComboBox *statusCombo = new QComboBox();
+            statusCombo->addItem("激活", true);
+            statusCombo->addItem("禁用", false);
+            statusCombo->setCurrentText(user.is_active ? "激活" : "禁用");
+            statusLayout->addWidget(statusLabel);
+            statusLayout->addWidget(statusCombo);
+            layout->addLayout(statusLayout);
+
+            // 按钮
+            QHBoxLayout *buttonLayout = new QHBoxLayout();
+            QPushButton *okBtn = new QPushButton("保存");
+            QPushButton *cancelBtn = new QPushButton("取消");
+            buttonLayout->addStretch();
+            buttonLayout->addWidget(okBtn);
+            buttonLayout->addWidget(cancelBtn);
+            layout->addLayout(buttonLayout);
+
+            connect(okBtn, &QPushButton::clicked, [&]() {
+                if (usernameEdit->text().trimmed().isEmpty()) {
+                    QMessageBox::warning(&editDialog, "错误", "请输入用户名");
+                    return;
+                }
+                if (emailEdit->text().trimmed().isEmpty()) {
+                    QMessageBox::warning(&editDialog, "错误", "请输入邮箱");
+                    return;
+                }
+
+                // 更新用户信息
+                User updatedUser = user;
+                updatedUser.username = usernameEdit->text().toUtf8().toStdString();
+                updatedUser.email = emailEdit->text().toUtf8().toStdString();
+                updatedUser.is_active = statusCombo->currentData().toBool();
+
+                auto result = g_cliHandler->getDbManager()->updateUser(updatedUser);
+                if (result.success) {
+                    QMessageBox::information(&editDialog, "编辑成功", "用户信息已更新");
+                    editDialog.accept();
+                    updateUserList();
+                } else {
+                    QMessageBox::warning(&editDialog, "编辑失败", "编辑用户时出现错误: " + QString::fromStdString(result.message));
+                }
+            });
+
+            connect(cancelBtn, &QPushButton::clicked, [&]() {
+                editDialog.reject();
+            });
+
+            editDialog.exec();
+        });
+
+        connect(btnDelete, &QPushButton::clicked, [this, user]() {
+            int ret = QMessageBox::question(this, "确认删除",
+                QString("确定要删除用户 \"%1\" 吗？").arg(QString::fromUtf8(user.username)));
+            if (ret == QMessageBox::Yes) {
+                std::vector<std::string> args = {"deleteuser", std::to_string(user.id)};
+                bool ok = g_cliHandler->handleDeleteUser(args);
+                if (ok) {
+                    QMessageBox::information(this, "删除成功", "用户已删除");
+                    updateUserList();
+                } else {
+                    QMessageBox::warning(this, "删除失败", "删除用户时出现错误");
+                }
+            }
+        });
+
+        connect(btnResetPwd, &QPushButton::clicked, [this, user]() {
+            int ret = QMessageBox::question(this, "确认重置",
+                QString("确定要重置用户 \"%1\" 的密码吗？\n密码将重置为: 123456").arg(QString::fromUtf8(user.username)));
+            if (ret == QMessageBox::Yes) {
+                // 重置密码为默认密码
+                User updatedUser = user;
+                updatedUser.password_hash = AuthManager::hashPassword("123456");
+
+                auto result = g_cliHandler->getDbManager()->updateUser(updatedUser);
+                if (result.success) {
+                    QMessageBox::information(this, "重置成功", "密码已重置为: 123456");
+                } else {
+                    QMessageBox::warning(this, "重置失败", "重置密码时出现错误: " + QString::fromStdString(result.message));
+                }
+            }
+        });
+
+        operationLayout->addWidget(btnEdit);
+        operationLayout->addWidget(btnDelete);
+        operationLayout->addWidget(btnResetPwd);
+        operationLayout->addStretch();
+
+        table->setCellWidget(i, 5, operationWidget);
+    }
+
+    // 设置列宽
+    table->resizeColumnsToContents();
+    table->setColumnWidth(5, 130); // 操作列设置合适的固定宽度
+    table->horizontalHeader()->setStretchLastSection(false);
+    table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents); // ID列
+    table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch); // 用户名列可拉伸
+    table->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch); // 邮箱列可拉伸
+    table->horizontalHeader()->setSectionResizeMode(3, QHeaderView::ResizeToContents); // 状态列
+    table->horizontalHeader()->setSectionResizeMode(4, QHeaderView::ResizeToContents); // 时间列
+    table->horizontalHeader()->setSectionResizeMode(5, QHeaderView::Fixed); // 操作列固定
 }
 
 

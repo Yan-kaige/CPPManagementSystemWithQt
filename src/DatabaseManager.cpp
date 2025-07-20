@@ -308,9 +308,9 @@ Result<bool> DatabaseManager::updateUser(const User& user) {
         return Result<bool>::Error("更新用户失败: " + std::string(mysql_error(db)));
     }
     
-    if (mysql_affected_rows(db) == 0) {
-        return Result<bool>::Error("用户不存在或未发生更改");
-    }
+    //if (mysql_affected_rows(db) == 0) {
+    //    return Result<bool>::Error("用户不存在或未发生更改");
+    //}
     
     return Result<bool>::Success(true);
 }

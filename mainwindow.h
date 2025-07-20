@@ -8,6 +8,7 @@
 #include <QTreeWidget>
 #include <QStackedWidget>
 #include <QSplitter>
+#include "common.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -43,6 +44,22 @@ private:
     void showUserManagementPage();
     void showDocumentManagementPage();
     void showSharedDocumentsPage();
+    void updateDocumentList();
+    void updateSharedDocumentList();
+    void onUploadDocumentClicked();
+    void onSearchDocumentsClicked();
+    void onResetDocumentsClicked();
+    void onExportDocumentsClicked();
+    void onSearchSharedDocumentsClicked();
+    void onResetSharedDocumentsClicked();
+    void updateDocumentTableWithData(QTableWidget *table, const std::vector<Document>& docs);
+    void updateSharedDocumentTableWithData(QTableWidget *table, const std::vector<Document>& docs);
+
+    void onSearchUsersClicked();
+    void onResetUsersClicked();
+    void onAddUserClicked();
+    void onExportUsersClicked();
+    void updateUserTableWithData(QTableWidget *table, const std::vector<User>& users);
 
 
 private slots:
