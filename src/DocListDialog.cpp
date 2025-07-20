@@ -156,8 +156,7 @@ void DocListDialog::onDeleteDocClicked()
         QMessageBox::critical(this, "错误", "CLIHandler 未初始化");
         return;
     }
-    std::vector<std::string> args = {"deletedoc", std::to_string(docId)};
-    bool ok = g_cliHandler->handleDeleteDocument(args);
+    bool ok = g_cliHandler->handleDeleteDocument(docId);
     if (ok) {
         QMessageBox::information(this, "删除文档", "删除成功！");
         // 刷新文档列表
@@ -204,8 +203,7 @@ void DocListDialog::onAddDocClicked()
             QMessageBox::warning(&dlg, "提示", "标题和文件不能为空！");
             return;
         }
-        std::vector<std::string> args = { "adddoc", title.toUtf8().constData(), desc.toUtf8().constData(), file.toUtf8().constData() };
-        if (g_cliHandler->handleAddDocument(args)) {
+        if (g_cliHandler->handleAddDocument(title.toUtf8().constData(), desc.toUtf8().constData(), file.toUtf8().constData())) {
             QMessageBox::information(&dlg, "成功", "上传成功！");
             dlg.accept();
             // 刷新文档列表
@@ -251,8 +249,7 @@ void DocListDialog::onDownloadDocClicked()
         QMessageBox::critical(this, "错误", "CLIHandler 未初始化");
         return;
     }
-    std::vector<std::string> args = { "download", minioKey.toUtf8().constData(), savePath.toUtf8().constData() };
-    bool ok = g_cliHandler->handleDownloadFile(args);
+    bool ok = g_cliHandler->handleDownloadFile(minioKey.toUtf8().constData(), savePath.toUtf8().constData());
     if (ok) {
         QMessageBox::information(this, "下载文件", "下载成功！");
     } else {
@@ -300,13 +297,8 @@ void DocListDialog::onEditDocClicked()
             return;
         }
 
-        // 构建参数列表，如果有新文件则包含文件路径
-        std::vector<std::string> args = { "updatedoc", std::to_string(docId), newTitle.toUtf8().constData(), newDesc.toUtf8().constData() };
-        if (!newFile.isEmpty()) {
-            args.push_back(newFile.toUtf8().constData());
-        }
-
-        bool ok = g_cliHandler->handleUpdateDocument(args);
+ 
+        bool ok = g_cliHandler->handleUpdateDocument(docId, newTitle.toUtf8().constData(), newDesc.toUtf8().constData());
         if (ok) {
             QString message = "文档信息已更新！";
             if (!newFile.isEmpty()) {
@@ -350,8 +342,8 @@ void DocListDialog::onExportDocsClicked()
     std::string username = userPair.second.username;
 
     // 3. 调用导出
-    bool ok = g_cliHandler->handleExportDocsExcel(username, filePath.toUtf8().constData());
-    if (ok) {
+    Result<bool> ok= g_cliHandler->exportDocumentsToExcel(username, filePath.toUtf8().constData());
+    if (ok.success) {
         QMessageBox::information(this, "导出成功", "文档已成功导出到:\n" + filePath);
     } else {
         QMessageBox::warning(this, "导出失败", "导出过程中出现错误！");

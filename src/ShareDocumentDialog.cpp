@@ -123,14 +123,9 @@ void ShareDocumentDialog::onShareClicked()
         QMessageBox::critical(this, "错误", "CLIHandler 未初始化");
         return;
     }
-    
-    std::vector<std::string> args = {
-        "sharedoc", 
-        std::to_string(currentDocument.id), 
-        selectedUser.username
-    };
-    
-    bool success = g_cliHandler->handleShareDocument(args);
+        
+    bool success = g_cliHandler->handleShareDocument(currentDocument.id,
+        selectedUser.username);
     
     if (success) {
         QMessageBox::information(this, "分享成功", 

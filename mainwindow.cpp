@@ -131,9 +131,8 @@ void MainWindow::on_btnLogin_clicked()
     qDebug() << username;
     qDebug() << password;
     try {
-        std::vector<std::string> args = { "login", username.toUtf8().constData(), password.toUtf8().constData() };
-        bool ok = g_cliHandler->handleLogin(args);
-        if (ok) {
+        auto result = g_cliHandler->loginUser(username.toUtf8().toStdString(), password.toUtf8().toStdString());
+        if (result.success) {
             // 恢复欢迎页面的原始提示文字
             QLabel *welcomeDesc = findChild<QLabel*>("labelWelcomeDesc");
             if (welcomeDesc) {
@@ -143,7 +142,7 @@ void MainWindow::on_btnLogin_clicked()
             updateCurrentUserInfo();
         }
         else {
-            QMessageBox::warning(this, "登录", "登录失败，请检查用户名和密码");
+            QMessageBox::warning(this, "登录", "登录失败: " + QString::fromStdString(result.message));
         }
     }
     catch (const std::length_error& e) {
@@ -158,9 +157,8 @@ void MainWindow::on_btnLogout_clicked()
         QMessageBox::critical(this, "错误", "CLIHandler 未初始化");
         return;
     }
-    std::vector<std::string> args = {"logout"};
-    bool ok = g_cliHandler->handleLogout(args);
-    if (ok) {
+    auto result = g_cliHandler->logoutUser();
+    if (result.success) {
         QMessageBox::information(this, "登出", "登出成功");
         // 清空用户表格
         QTableWidget *tableUsers = findChild<QTableWidget*>("tableWidgetUsers");
@@ -179,7 +177,7 @@ void MainWindow::on_btnLogout_clicked()
         }
         updateCurrentUserInfo();
     } else {
-        QMessageBox::warning(this, "登出", "登出失败，当前未登录");
+        QMessageBox::warning(this, "登出", "登出失败: " + QString::fromStdString(result.message));
     }
 }
 
@@ -264,14 +262,13 @@ void MainWindow::onDeleteUserClicked()
         QMessageBox::critical(this, "错误", "CLIHandler 未初始化");
         return;
     }
-    std::vector<std::string> args = {"deleteuser", std::to_string(userId)};
-    bool ok = g_cliHandler->handleDeleteUser(args);
-    if (ok) {
+    auto result = g_cliHandler->deleteUser(userId);
+    if (result.success) {
         QMessageBox::information(this, "删除用户", "删除成功！");
         updateUserList();
         updateCurrentUserInfo();
     } else {
-        QMessageBox::warning(this, "删除用户", "删除失败，不能删除当前登录用户或用户不存在");
+        QMessageBox::warning(this, "删除用户", "删除失败: " + QString::fromStdString(result.message));
     }
 }
 
@@ -285,32 +282,29 @@ void MainWindow::onToggleUserActiveClicked()
         QMessageBox::critical(this, "错误", "CLIHandler 未初始化");
         return;
     }
-    std::vector<std::string> args;
     if (isActive) {
         if (QMessageBox::question(this, "确认禁用", QString("确定要禁用用户ID %1 吗？").arg(userId)) != QMessageBox::Yes) {
             return;
         }
-        args = {"deactivate", std::to_string(userId)};
-        bool ok = g_cliHandler->handleDeactivateUser(args);
-        if (ok) {
+        auto result = g_cliHandler->deactivateUser(userId);
+        if (result.success) {
             QMessageBox::information(this, "禁用用户", "禁用成功！");
             updateUserList();
             updateCurrentUserInfo();
         } else {
-            QMessageBox::warning(this, "禁用用户", "禁用失败");
+            QMessageBox::warning(this, "禁用用户", "禁用失败: " + QString::fromStdString(result.message));
         }
     } else {
         if (QMessageBox::question(this, "确认激活", QString("确定要激活用户ID %1 吗？").arg(userId)) != QMessageBox::Yes) {
             return;
         }
-        args = {"activate", std::to_string(userId)};
-        bool ok = g_cliHandler->handleActivateUser(args);
-        if (ok) {
+        auto result = g_cliHandler->activateUser(userId);
+        if (result.success) {
             QMessageBox::information(this, "激活用户", "激活成功！");
             updateUserList();
             updateCurrentUserInfo();
         } else {
-            QMessageBox::warning(this, "激活用户", "激活失败");
+            QMessageBox::warning(this, "激活用户", "激活失败: " + QString::fromStdString(result.message));
         }
     }
 }
@@ -341,9 +335,8 @@ void MainWindow::on_btnRegisterUser_clicked()
         return;
     }
 
-    std::vector<std::string> args = {"register", username.toUtf8().constData(), password.toUtf8().constData(), email.toUtf8().constData()};
-    bool ok = g_cliHandler->handleRegister(args);
-    if (ok) {
+    auto result = g_cliHandler->registerUser(username.toUtf8().toStdString(), password.toUtf8().toStdString(), email.toUtf8().toStdString());
+    if (result.success) {
         QMessageBox::information(this, "注册", "注册成功！");
         usernameEdit->clear();
         passwordEdit->clear();
@@ -351,7 +344,7 @@ void MainWindow::on_btnRegisterUser_clicked()
         updateUserList();
         updateCurrentUserInfo();
     } else {
-        QMessageBox::warning(this, "注册", "注册失败，请检查输入或用户名/邮箱是否已存在");
+        QMessageBox::warning(this, "注册", "注册失败: " + QString::fromStdString(result.message));
     }
 }
 
@@ -430,18 +423,16 @@ void MainWindow::on_btnChangePasswordDialog_clicked()
         QString oldPass = dialog.getOldPassword();
         QString newPass = dialog.getNewPassword();
 
-        std::vector<std::string> args = {"changepass", oldPass.toUtf8().constData(), newPass.toUtf8().constData()};
-        bool ok = g_cliHandler->handleChangePassword(args);
+        auto result = g_cliHandler->changeUserPassword(oldPass.toUtf8().toStdString(), newPass.toUtf8().toStdString());
 
-        if (ok) {
+        if (result.success) {
             QMessageBox::information(this, "修改密码", "密码修改成功，请重新登录");
             // 自动登出
-            std::vector<std::string> logoutArgs = {"logout"};
-            g_cliHandler->handleLogout(logoutArgs);
+            g_cliHandler->logoutUser();
             updateUserList();
             updateCurrentUserInfo();
         } else {
-            QMessageBox::warning(this, "修改密码", "密码修改失败，请检查原密码或新密码格式");
+            QMessageBox::warning(this, "修改密码", "密码修改失败: " + QString::fromStdString(result.message));
         }
     }
 }
@@ -1182,19 +1173,17 @@ void MainWindow::onUploadDocumentClicked()
             return;
         }
 
-        std::vector<std::string> args = {
-            "adddoc",
+        auto result = g_cliHandler->handleAddDocument(
             titleEdit->text().toUtf8().toStdString(),
             descEdit->toPlainText().toUtf8().toStdString(),
             fileEdit->text().toUtf8().toStdString()
-        };
-        bool success = g_cliHandler->handleAddDocument(args);
-        if (success) {
+        );
+        if (result) {
             QMessageBox::information(&uploadDialog, "上传成功", "文档已成功上传");
             uploadDialog.accept();
             updateDocumentList(); // 刷新列表
         } else {
-            QMessageBox::warning(&uploadDialog, "上传失败", "上传文档时出现错误");
+            QMessageBox::warning(&uploadDialog, "上传失败", "上传文档时出现错误: ");
         }
     });
 
@@ -1255,12 +1244,11 @@ void MainWindow::onExportDocumentsClicked()
             auto currentUserResult = g_cliHandler->getCurrentUserForUI();
             if (currentUserResult.first) {
                 User currentUser = currentUserResult.second;
-                std::vector<std::string> args = {"export-docs-excel", fileName.toUtf8().toStdString(), "true"};
-                bool success = g_cliHandler->handleExportDocumentsExcel(args);
-                if (success) {
+                auto result = g_cliHandler->exportDocumentsToExcel(fileName.toUtf8().toStdString(), true);
+                if (result.success) {
                     QMessageBox::information(this, "导出成功", "文档列表已导出到: " + fileName);
                 } else {
-                    QMessageBox::warning(this, "导出失败", "导出文档列表时出现错误");
+                    QMessageBox::warning(this, "导出失败", "导出文档列表时出现错误: " + QString::fromStdString(result.message));
                 }
             }
         }
@@ -1481,35 +1469,23 @@ void MainWindow::updateDocumentTableWithData(QTableWidget *table, const std::vec
                     return;
                 }
 
-                std::vector<std::string> args;
-                if (newFileEdit->text().trimmed().isEmpty()) {
-                    // 只更新标题和描述，不更换文件
-                    args = {
-                        "updatedoc",
-                        std::to_string(doc.id),
-                        titleEdit->text().toUtf8().toStdString(),
-                        descEdit->toPlainText().toUtf8().toStdString()
-                    };
-                } else {
-                    // 更新标题、描述和文件
-                    args = {
-                        "updatedoc",
-                        std::to_string(doc.id),
-                        titleEdit->text().toUtf8().toStdString(),
-                        descEdit->toPlainText().toUtf8().toStdString(),
-                        newFileEdit->text().toUtf8().toStdString()
-                    };
-                }
+                std::string newFilePath = newFileEdit->text().trimmed().isEmpty() ? "" : newFileEdit->text().toUtf8().toStdString();
 
-                bool success = g_cliHandler->handleUpdateDocument(args);
-                if (success) {
+                auto result = g_cliHandler->handleUpdateDocument(
+                    doc.id,
+                    titleEdit->text().toUtf8().toStdString(),
+                    descEdit->toPlainText().toUtf8().toStdString(),
+                    newFilePath
+                );
+
+                if (result) {
                     QString message = newFileEdit->text().trimmed().isEmpty() ?
                         "文档信息已更新" : "文档信息和文件已更新";
                     QMessageBox::information(&editDialog, "编辑成功", message);
                     editDialog.accept();
                     updateDocumentList();
                 } else {
-                    QMessageBox::warning(&editDialog, "编辑失败", "编辑文档时出现错误");
+                    QMessageBox::warning(&editDialog, "编辑失败", "编辑文档时出现错误: ");
                 }
             });
 
@@ -1524,9 +1500,8 @@ void MainWindow::updateDocumentTableWithData(QTableWidget *table, const std::vec
             int ret = QMessageBox::question(this, "确认删除",
                 QString("确定要删除文档 \"%1\" 吗？").arg(QString::fromUtf8(doc.title)));
             if (ret == QMessageBox::Yes) {
-                std::vector<std::string> args = {"deletedoc", std::to_string(doc.id)};
-                bool ok = g_cliHandler->handleDeleteDocument(args);
-                if (ok) {
+                auto result = g_cliHandler->handleDeleteDocument(doc.id);
+                if (result) {
                     QMessageBox::information(this, "删除成功", "文档已删除");
                     updateDocumentList();
                 } else {
@@ -1726,12 +1701,11 @@ void MainWindow::on_btnExportUsers_clicked()
 {
     QString filePath = QFileDialog::getSaveFileName(this, "导出用户", "users_export.csv", "Excel Files (*.xlsx);;CSV Files (*.csv);;All Files (*)");
     if (filePath.isEmpty()) return;
-    std::vector<std::string> args = { "export-users-excel", filePath.toUtf8().constData() };
-    bool ok = g_cliHandler->handleExportUsersExcel(args);
-    if (ok) {
+    auto result = g_cliHandler->exportUsersToExcel(filePath.toUtf8().toStdString());
+    if (result.success) {
         QMessageBox::information(this, "导出用户", "导出成功！");
     } else {
-        QMessageBox::warning(this, "导出用户", "导出失败，请检查路径或权限");
+        QMessageBox::warning(this, "导出用户", "导出失败: " + QString::fromStdString(result.message));
     }
 }
 
@@ -1776,13 +1750,12 @@ void MainWindow::on_btnImportUsers_clicked()
     }
 
     // 2. 调用导入命令
-    std::vector<std::string> args = {"import-users-excel", filePath.toUtf8().constData()};
-    bool ok = g_cliHandler->handleImportUsersExcel(args);
-    if (ok) {
+    auto result = g_cliHandler->importUsersFromExcel(filePath.toUtf8().toStdString());
+    if (result.success) {
         QMessageBox::information(this, "导入成功", "用户数据导入成功！");
         updateUserList();
     } else {
-        QMessageBox::warning(this, "导入失败", "用户数据导入失败，请检查文件格式或内容。");
+        QMessageBox::warning(this, "导入失败", "用户数据导入失败: " + QString::fromStdString(result.message));
     }
 }
 
@@ -1891,14 +1864,12 @@ void MainWindow::onAddUserClicked()
             return;
         }
 
-        std::vector<std::string> args = {
-            "register",
+        auto result = g_cliHandler->registerUser(
             usernameEdit->text().toUtf8().toStdString(),
             passwordEdit->text().toUtf8().toStdString(),
             emailEdit->text().toUtf8().toStdString()
-        };
-        bool success = g_cliHandler->handleRegister(args);
-        if (success) {
+        );
+        if (result.success) {
             // 如果需要设置为禁用状态
             if (!statusCombo->currentData().toBool()) {
                 // 获取刚创建的用户并设置为禁用状态
@@ -1913,7 +1884,7 @@ void MainWindow::onAddUserClicked()
             addDialog.accept();
             updateUserList();
         } else {
-            QMessageBox::warning(&addDialog, "添加失败", "添加用户时出现错误，可能用户名或邮箱已存在");
+            QMessageBox::warning(&addDialog, "添加失败", "添加用户时出现错误: " + QString::fromStdString(result.message));
         }
     });
 
@@ -1929,12 +1900,11 @@ void MainWindow::onExportUsersClicked()
     QString fileName = QFileDialog::getSaveFileName(this, "导出用户列表", "users_export.xlsx", "Excel文件 (*.xlsx)");
     if (!fileName.isEmpty()) {
         if (g_cliHandler) {
-            std::vector<std::string> args = {"export-users-excel", fileName.toUtf8().toStdString()};
-            bool success = g_cliHandler->handleExportUsersExcel(args);
-            if (success) {
+            auto result = g_cliHandler->exportUsersToExcel(fileName.toUtf8().toStdString());
+            if (result.success) {
                 QMessageBox::information(this, "导出成功", "用户列表已导出到: " + fileName);
             } else {
-                QMessageBox::warning(this, "导出失败", "导出用户列表时出现错误");
+                QMessageBox::warning(this, "导出失败", "导出用户列表时出现错误: " + QString::fromStdString(result.message));
             }
         }
     }
@@ -2079,13 +2049,12 @@ void MainWindow::updateUserTableWithData(QTableWidget *table, const std::vector<
             int ret = QMessageBox::question(this, "确认删除",
                 QString("确定要删除用户 \"%1\" 吗？").arg(QString::fromUtf8(user.username)));
             if (ret == QMessageBox::Yes) {
-                std::vector<std::string> args = {"deleteuser", std::to_string(user.id)};
-                bool ok = g_cliHandler->handleDeleteUser(args);
-                if (ok) {
+                auto result = g_cliHandler->deleteUser(user.id);
+                if (result.success) {
                     QMessageBox::information(this, "删除成功", "用户已删除");
                     updateUserList();
                 } else {
-                    QMessageBox::warning(this, "删除失败", "删除用户时出现错误");
+                    QMessageBox::warning(this, "删除失败", "删除用户时出现错误: " + QString::fromStdString(result.message));
                 }
             }
         });

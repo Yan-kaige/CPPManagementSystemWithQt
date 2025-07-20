@@ -12,188 +12,198 @@
 #include <thread>
 #include "linenoise.h"
 
-// 命令结构体
-struct Command {
-    std::string name;
-    std::string description;
-    std::string usage;
-    std::vector<std::string> examples;
-    std::function<bool(const std::vector<std::string>&)> handler;
-    bool requiresAuth;
-    std::vector<std::string> aliases;
-};
-
-// CLI处理器主类
+/**
+ * @brief CLI处理器主类
+ *
+ * 负责处理命令行界面的所有功能，包括：
+ * - 用户认证和管理
+ * - 文档管理操作
+ * - 文件上传下载
+ * - Excel导入导出
+ * - GUI界面数据提供
+ */
 class CLIHandler {
 private:
-    // 核心组件
+    // ==================== 私有成员变量 ====================
+
+    /** @brief 数据库管理器 - 负责所有数据库操作 */
     std::unique_ptr<DatabaseManager> dbManager;
+
+    /** @brief 认证管理器 - 负责用户登录、注册、会话管理 */
     std::unique_ptr<AuthManager> authManager;
+
+    /** @brief Redis管理器 - 负责缓存和会话存储 */
     std::unique_ptr<RedisManager> redisManager;
 
+    /** @brief 导入导出管理器 - 负责Excel/CSV文件处理 */
     std::unique_ptr<ImportExportManager> importExportManager;
 
-    // 命令映射
-    std::map<std::string, Command> commands;
 
-    // 运行状态
+    /** @brief CLI运行状态标志 */
     bool running;
-    std::string prompt;
 
-    // 历史记录
-    std::vector<std::string> commandHistory;
-    int maxHistorySize;
-
-    // 自动完成
-    std::vector<std::string> getCompletions(const std::string& partial);
-
-    // 命令解析
-    std::vector<std::string> parseCommand(const std::string& input);
-    std::string joinArgs(const std::vector<std::string>& args, size_t start = 0);
-
-
-
-
-
-
-    // 命令导出
-    bool handleExportCommandsCSV(const std::vector<std::string>& args);
-
-    // 定时清理线程相关成员
+    /** @brief 定时清理线程运行标志 */
     std::atomic<bool> cleanupThreadRunning;
+
+    /** @brief 定时清理线程 - 定期清理过期会话 */
     std::thread cleanupThread;
 
 public:
+    // ==================== 构造和析构 ====================
+
+    /** @brief 构造函数 - 初始化所有组件和线程 */
     CLIHandler();
+
+    /** @brief 析构函数 - 清理资源和停止线程 */
     ~CLIHandler();
 
-      std::unique_ptr<MinioClient> minioClient;
+    // ==================== 生命周期管理 ====================
 
-    // 初始化和运行
+    /** @brief 初始化CLI处理器 - 连接数据库、Redis等 */
     bool initialize();
+
+    /** @brief 运行CLI主循环 - 处理用户输入命令 */
     void run();
+
+    /** @brief 关闭CLI处理器 - 清理资源和停止线程 */
     void shutdown();
 
-    // 获取MinioClient
+    /** @brief MinIO客户端 - 负责文件存储操作 */
+    std::unique_ptr<MinioClient> minioClient;
+
+
+    // ==================== 组件访问器 ====================
+
+    /** @brief 获取MinIO客户端实例 */
     MinioClient* getMinioClient() const { return minioClient.get(); }
 
-    // 获取DatabaseManager
+    /** @brief 获取数据库管理器实例 */
     DatabaseManager* getDbManager() const { return dbManager.get(); }
 
-    // 获取AuthManager
+    /** @brief 获取认证管理器实例 */
     AuthManager* getAuthManager() const { return authManager.get(); }
 
-    // 命令注册
-    void registerCommand(const Command& command);
-    void registerAllCommands();
+    // ==================== 状态查询 ====================
 
-    // 交互式功能
-    void showWelcome();
-    void showPrompt();
-    std::string getInput();
-
-    // 批处理模式
-    bool executeBatch(const std::string& scriptFile);
-    bool executeCommand(const std::string& commandLine);
-
-    // 配置和状态
-    void setPrompt(const std::string& newPrompt);
-    std::string getPrompt() const;
+    /** @brief 检查CLI是否正在运行 */
     bool isRunning() const;
 
-    // 历史记录管理
-    void addToHistory(const std::string& command);
-    void appendToHistoryFile(const std::string& commandLine); // 新增：写入本地历史文件
-    void showHistory() const;
-    void clearHistory();
-    void saveHistory(const std::string& filename) const;
-    bool loadHistory(const std::string& filename);
+    // ==================== 静态成员和回调 ====================
 
-    // 错误处理
-    void handleException(const std::exception& e);
-    void handleUnknownCommand(const std::string& command);
+    /** @brief 静态实例指针 - 用于linenoise补全回调访问 */
+    static CLIHandler* instance;
 
-    // 工具函数
-    static std::string getVersion();
-    static void showLicense();
-    static void showAbout();
-
+    /** @brief 命令自动补全回调函数 - 为linenoise提供命令补全 */
     static void completionCallback(const char* prefix, linenoiseCompletions* lc);
-    static CLIHandler* instance; // 用于补全回调访问
 
-    // 公开给UI调用的命令处理
-    bool handleLogin(const std::vector<std::string>& args);
-    bool handleLogout(const std::vector<std::string>& args);
-    bool handleListUsers(const std::vector<std::string>& args);
+    // ==================== GUI数据提供方法 ====================
+
+    /** @brief 获取所有用户列表 - 供GUI界面显示 */
     std::vector<User> getAllUsersForUI();
+
+    /** @brief 根据关键词搜索用户 - 供GUI搜索功能使用 */
     std::vector<User> getSearchedUsersForUI(const std::string& keyword);
-    bool handleRegister(const std::vector<std::string>& args);
-    // 输出格式化
-    void printTable(const std::vector<std::vector<std::string>>& data,
-                    const std::vector<std::string>& headers = {});
-    void printUser(const User& user);
-    void printDocument(const Document& doc);
-    void printSuccess(const std::string& message);
-    void printError(const std::string& message);
-    void printWarning(const std::string& message);
-    void printInfo(const std::string& message);
 
-    // 输入验证
-    bool validateInput(const std::string& input, const std::string& type);
-    std::string getPasswordInput(const std::string& prompt = "密码: ");
-    std::string getSecureInput(const std::string& prompt);
-
-    // 命令处理函数
-    bool handleHelp(const std::vector<std::string>& args);
-    bool handleExit(const std::vector<std::string>& args);
-    bool handleClear(const std::vector<std::string>& args);
-    bool handleHistory(const std::vector<std::string>& args); // 新增：history命令
-
-    // 用户认证命令
-    bool handleWhoami(const std::vector<std::string>& args);
-    bool handleChangePassword(const std::vector<std::string>& args);
-
-    // 用户管理命令
-    bool handleDeleteUser(const std::vector<std::string>& args);
-    bool handleSearchUsers(const std::vector<std::string>& args);
-    bool handleDeactivateUser(const std::vector<std::string>& args);
-    bool handleActivateUser(const std::vector<std::string>& args);
-    bool handleListSessions(const std::vector<std::string>& args);
-    bool handleClearSessions(const std::vector<std::string>& args);
-
-    // 文档管理命令
-    bool handleAddDocument(const std::vector<std::string>& args);
-    bool handleGetDocument(const std::vector<std::string>& args);
-    bool handleListDocuments(const std::vector<std::string>& args);
-    bool handleUpdateDocument(const std::vector<std::string>& args);
-    bool handleDeleteDocument(const std::vector<std::string>& args);
-    bool handleSearchDocuments(const std::vector<std::string>& args);
-    bool handleShareDocument(const std::vector<std::string>& args);
-    bool handleListSharedDocuments(const std::vector<std::string>& args);
-
-    // 文件管理命令
-    bool handleUploadFile(const std::vector<std::string>& args);
-    bool handleDownloadFile(const std::vector<std::string>& args);
-    bool handleListFiles(const std::vector<std::string>& args);
-    bool handleDeleteFile(const std::vector<std::string>& args);
-    bool handleFileInfo(const std::vector<std::string>& args);
-    bool handleMinioStatus(const std::vector<std::string>& args);
-
+    /** @brief 获取当前登录用户信息 - 返回pair<是否成功, 用户对象> */
     std::pair<bool, User> getCurrentUserForUI();
+
+    /** @brief 获取指定用户的文档列表 - 供GUI文档管理使用 */
     std::vector<Document> getUserDocsForUI(int userId);
+
+    /** @brief 搜索指定用户的文档 - 根据关键词过滤用户文档 */
     std::vector<Document> getSearchedDocsForUI(int userId, const std::string& keyword);
+
+    /** @brief 获取分享给指定用户的文档列表 */
     std::vector<Document> getSharedDocsForUI(int userId);
 
+    // ==================== 输出格式化方法 ====================
 
-    // Excel导入导出命令
-    bool handleImportUsersExcel(const std::vector<std::string>& args);
-    bool handleImportDocumentsExcel(const std::vector<std::string>& args);
-    bool handleExportUsersExcel(const std::vector<std::string>& args);
-    bool handleExportDocumentsExcel(const std::vector<std::string>& args);
-    bool handleGenerateUserTemplate(const std::vector<std::string>& args);
-    bool handleGenerateDocumentTemplate(const std::vector<std::string>& args);
-    bool handlePreviewExcel(const std::vector<std::string>& args);
-    bool handleValidateExcel(const std::vector<std::string>& args);
-    bool handleExportDocsExcel(const std::string& username, const std::string& filePath);
+    /** @brief 打印用户信息 - 格式化输出用户详细信息 */
+    void printUser(const User& user);
 
+    /** @brief 打印文档信息 - 格式化输出文档详细信息 */
+    void printDocument(const Document& doc);
+
+    /** @brief 打印成功消息 - 绿色输出 */
+    void printSuccess(const std::string& message);
+
+    /** @brief 打印错误消息 - 红色输出 */
+    void printError(const std::string& message);
+
+    /** @brief 打印警告消息 - 黄色输出 */
+    void printWarning(const std::string& message);
+
+    /** @brief 打印信息消息 - 普通输出 */
+    void printInfo(const std::string& message);
+
+    // ==================== 用户认证和管理 ====================
+
+    /** @brief 用户登录 - 验证用户名密码并创建会话 */
+    Result<std::string> loginUser(const std::string& username, const std::string& password);
+
+    /** @brief 用户登出 - 清除当前会话 */
+    Result<bool> logoutUser();
+
+    /** @brief 用户注册 - 创建新用户账户 */
+    Result<User> registerUser(const std::string& username, const std::string& password, const std::string& email);
+
+    /** @brief 修改用户密码 - 需要提供旧密码验证 */
+    Result<bool> changeUserPassword(const std::string& oldPassword, const std::string& newPassword);
+
+    /** @brief 删除用户 - 管理员功能，删除指定用户 */
+    Result<bool> deleteUser(int userId);
+
+    /** @brief 激活用户 - 管理员功能，激活被禁用的用户 */
+    Result<bool> activateUser(int userId);
+
+    /** @brief 禁用用户 - 管理员功能，禁用指定用户 */
+    Result<bool> deactivateUser(int userId);
+
+    // ==================== 文档管理命令 ====================
+
+    /** @brief 添加文档 - 上传文件并创建文档记录 */
+    bool handleAddDocument(const std::string& title, const std::string& description, const std::string& filePath);
+
+    /** @brief 获取文档详情 - 根据文档ID显示详细信息 */
+    bool handleGetDocument(int docId);
+
+    /** @brief 列出文档 - 分页显示当前用户的文档列表 */
+    bool handleListDocuments(int limit = 50, int offset = 0);
+
+    /** @brief 更新文档 - 修改文档标题、描述或替换文件 */
+    bool handleUpdateDocument(int docId, const std::string& title, const std::string& description, const std::string& newFilePath = "");
+
+    /** @brief 删除文档 - 删除文档记录和关联文件 */
+    bool handleDeleteDocument(int docId);
+
+    /** @brief 搜索文档 - 根据关键词搜索文档标题和描述 */
+    bool handleSearchDocuments(const std::string& keyword);
+
+    /** @brief 分享文档 - 将文档分享给指定用户 */
+    bool handleShareDocument(int docId, const std::string& targetUsername);
+
+    /** @brief 列出分享文档 - 显示分享给当前用户的文档 */
+    bool handleListSharedDocuments(int limit = 50, int offset = 0);
+
+    // ==================== 文件管理命令 ====================
+
+    /** @brief 上传文件 - 将本地文件上传到MinIO存储 */
+    bool handleUploadFile(const std::string& localPath, const std::string& objectName = "");
+
+    /** @brief 下载文件 - 从MinIO存储下载文件到本地 */
+    bool handleDownloadFile(const std::string& objectName, const std::string& localPath);
+
+    /** @brief 检查MinIO状态 - 显示MinIO连接和存储状态 */
+    bool handleMinioStatus();
+
+    // ==================== Excel导入导出功能 ====================
+
+    /** @brief 导出用户数据到Excel - 将所有用户信息导出为Excel文件 */
+    Result<bool> exportUsersToExcel(const std::string& filePath);
+
+    /** @brief 从Excel导入用户数据 - 批量导入用户信息 */
+    Result<bool> importUsersFromExcel(const std::string& filePath);
+
+    /** @brief 导出文档数据到Excel - 导出当前用户的文档信息 */
+    Result<bool> exportDocumentsToExcel(const std::string& filePath, bool includeShared = false);
 };

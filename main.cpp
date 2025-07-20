@@ -23,54 +23,6 @@ void signalHandler(int signum) {
     exit(signum);
 }
 
-// // CLI 启动入口
-// int runCliMode(int argc1, char* argv[]) {
-//     int argc=1;
-//     std::string configFile = "config.json";
-
-//     std::string executeCommand = "";
-//     bool showHelp = false;
-
-//     for (int i = 1; i < argc; i++) {
-//         std::string arg = argv[i];
-//         if (arg == "-h" || arg == "--help") {
-//             showHelp = true;
-//         } else if (arg == "-c" || arg == "--config") {
-//             if (i + 1 < argc) configFile = argv[++i];
-//         } else if (arg == "-e" || arg == "--execute") {
-//             if (i + 1 < argc) executeCommand = argv[++i];
-//         }
-//     }
-
-//     if (showHelp) {
-//         qDebug() << "用法: app [-c config.json] [-e \"command\"]\n";
-//         return 0;
-//     }
-
-//     ConfigManager::getInstance()->loadConfig(configFile);
-//     Logger::getInstance()->initialize("cli.log", LogLevel::INFO, 1024 * 1024, 3);
-
-//     CLIHandler cli;
-//     g_cliHandler = &cli;
-
-//     signal(SIGINT, signalHandler);
-//     signal(SIGTERM, signalHandler);
-
-//     if (!cli.initialize()) {
-//         std::cerr << "初始化 CLIHandler 失败\n";
-//         return 1;
-//     }
-
-//     if (!executeCommand.empty()) {
-//         bool success = cli.executeCommand(executeCommand);
-//         cli.shutdown();
-//         return success ? 0 : 1;
-//     }
-
-//     cli.run();
-//     cli.shutdown();
-//     return 0;
-// }
 
 // 主程序入口
 int main(int argc, char *argv[]) {
