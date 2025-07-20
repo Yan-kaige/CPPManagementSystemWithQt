@@ -533,6 +533,18 @@ void MainWindow::setupNewUI()
     leftLayout->setSpacing(10);
     leftLayout->setContentsMargins(10, 10, 10, 10);
 
+    // 创建菜单树（放在最上面）
+    treeWidgetMenu = new QTreeWidget(this);
+    treeWidgetMenu->setHeaderHidden(true);
+    treeWidgetMenu->setVisible(false);
+    treeWidgetMenu->setStyleSheet(
+        "QTreeWidget { border: 1px solid #c0c0c0; border-radius: 5px; background-color: #fafafa; }"
+        "QTreeWidget::item { padding: 8px; border-bottom: 1px solid #e0e0e0; }"
+        "QTreeWidget::item:selected { background-color: #0078d4; color: white; }"
+        "QTreeWidget::item:hover { background-color: #e5f3ff; }"
+    );
+    leftLayout->addWidget(treeWidgetMenu);
+
     // 添加顶部弹性空间（未登录时居中显示登录界面）
     leftLayout->addStretch(1);
 
@@ -688,18 +700,6 @@ void MainWindow::setupNewUI()
 
     // 添加中间弹性空间（未登录时让登录界面居中）
     leftLayout->addStretch(1);
-
-    // 创建菜单树
-    treeWidgetMenu = new QTreeWidget(this);
-    treeWidgetMenu->setHeaderHidden(true);
-    treeWidgetMenu->setVisible(false);
-    treeWidgetMenu->setStyleSheet(
-        "QTreeWidget { border: 1px solid #c0c0c0; border-radius: 5px; background-color: #fafafa; }"
-        "QTreeWidget::item { padding: 8px; border-bottom: 1px solid #e0e0e0; }"
-        "QTreeWidget::item:selected { background-color: #0078d4; color: white; }"
-        "QTreeWidget::item:hover { background-color: #e5f3ff; }"
-    );
-    leftLayout->addWidget(treeWidgetMenu);
 
     // 添加底部弹性空间
     leftLayout->addStretch(1);
