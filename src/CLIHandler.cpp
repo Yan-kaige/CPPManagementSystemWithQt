@@ -90,11 +90,11 @@ bool CLIHandler::initialize() {
     }
     
     // 初始化MinioClient
-//    qDebug() << "正在初始化MinIO客户端...\n";
-//    qDebug() << "  Endpoint: " << config->getMinioEndpoint() +"\n";
-//    qDebug() << "  Access Key: " << config->getMinioAccessKey() +"\n";
-//    qDebug() << "  Bucket: " << config->getMinioBucket() +"\n";
-//    qDebug() << "  Secure: " << (config->getMinioSecure() ? "true" : "false") +"\n";
+    qDebug() << "正在初始化MinIO客户端...";
+    qDebug() << "  Endpoint: " << QString::fromStdString(config->getMinioEndpoint());
+    qDebug() << "  Access Key: " << QString::fromStdString(config->getMinioAccessKey());
+    qDebug() << "  Bucket: " << QString::fromStdString(config->getMinioBucket());
+    qDebug() << "  Secure: " << (config->getMinioSecure() ? "true" : "false");
     
     bool minioOk = minioClient->initialize(
         config->getMinioEndpoint(),
