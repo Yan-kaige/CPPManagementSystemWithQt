@@ -5,7 +5,7 @@
 #include <limits>
 #include <thread>
 #include <atomic>
-#include "linenoise.h"
+
 #include "Common.h"
 #include <QDebug>
 CLIHandler* CLIHandler::instance = nullptr;
@@ -18,10 +18,6 @@ CLIHandler::CLIHandler()
     authManager = std::make_unique<AuthManager>(dbManager.get(), redisManager.get());  // ✅ 传递RedisManager
     minioClient = std::make_unique<MinioClient>();
     importExportManager = std::make_unique<ImportExportManager>(dbManager.get());  // ✅ 传参
-
-    // 加载linenoise历史
-    linenoiseHistoryLoad(".cli_history");
-
 
     // 启动定时线程，定期清理过期会话（每60秒）
     cleanupThreadRunning = true;
@@ -41,8 +37,7 @@ CLIHandler::~CLIHandler() {
     if (cleanupThread.joinable()) {
         cleanupThread.join();
     }
-    // 保存linenoise历史
-    linenoiseHistorySave(".cli_history");
+
 }
 
 bool CLIHandler::initialize() {
@@ -862,20 +857,4 @@ void CLIHandler::printUser(const User& user) {
     qDebug() << QString::fromUtf8("状态: " + user.is_active );
     qDebug() << QString::fromUtf8("创建时间: " + Utils::formatTimestamp(user.created_at));
     qDebug() << QString::fromUtf8("==================");
-}
-
-void CLIHandler::completionCallback(const char* prefix, linenoiseCompletions* lc) {
-    // 基本命令补全
-    std::vector<std::string> commands = {
-        "help", "h", "?",
-        "exit", "quit", "q",
-        "clear"
-    };
-
-    std::string prefixStr(prefix);
-    for (const auto& cmd : commands) {
-        if (cmd.find(prefixStr) == 0) {  // 如果命令以prefix开头
-            linenoiseAddCompletion(lc, cmd.c_str());
-        }
-    }
 }

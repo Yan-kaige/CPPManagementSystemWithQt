@@ -10,7 +10,7 @@
 #include "Logger.h"
 #include <atomic>
 #include <thread>
-#include "linenoise.h"
+
 
 /**
  * @brief CLI处理器主类
@@ -92,9 +92,6 @@ public:
 
     /** @brief 静态实例指针 - 用于linenoise补全回调访问 */
     static CLIHandler* instance;
-
-    /** @brief 命令自动补全回调函数 - 为linenoise提供命令补全 */
-    static void completionCallback(const char* prefix, linenoiseCompletions* lc);
 
     // ==================== GUI数据提供方法 ====================
 
