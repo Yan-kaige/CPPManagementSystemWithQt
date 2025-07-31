@@ -122,6 +122,90 @@ bool DatabaseManager::createTables() {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     )";
 
+    // 权限管理相关表
+    std::string createRolesTable = R"(
+        CREATE TABLE IF NOT EXISTS roles (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            role_name VARCHAR(100) NOT NULL UNIQUE,
+            role_code VARCHAR(50) NOT NULL UNIQUE,
+            description TEXT,
+            is_active BOOLEAN DEFAULT TRUE,
+            is_system BOOLEAN DEFAULT FALSE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            created_by INT,
+            updated_by INT,
+            INDEX idx_role_code (role_code),
+            INDEX idx_is_active (is_active)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    )";
+
+    std::string createMenusTable = R"(
+        CREATE TABLE IF NOT EXISTS menus (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(100) NOT NULL,
+            code VARCHAR(50) NOT NULL UNIQUE,
+            parent_id INT DEFAULT NULL,
+            type ENUM('DIRECTORY', 'MENU', 'BUTTON') DEFAULT 'MENU',
+            url VARCHAR(200),
+            icon VARCHAR(100),
+            permission_key VARCHAR(100),
+            button_type ENUM('ADD', 'EDIT', 'DELETE', 'VIEW', 'EXPORT', 'IMPORT', 'CUSTOM'),
+            sort_order INT DEFAULT 0,
+            is_visible BOOLEAN DEFAULT TRUE,
+            is_active BOOLEAN DEFAULT TRUE,
+            description TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            created_by INT,
+            updated_by INT,
+            INDEX idx_parent_id (parent_id),
+            INDEX idx_code (code),
+            INDEX idx_type (type),
+            INDEX idx_sort_order (sort_order),
+            INDEX idx_is_active (is_active),
+            INDEX idx_permission_key (permission_key),
+            FOREIGN KEY (parent_id) REFERENCES menus(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    )";
+
+    std::string createUserRolesTable = R"(
+        CREATE TABLE IF NOT EXISTS user_roles (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            role_id INT NOT NULL,
+            assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            assigned_by INT,
+            is_active BOOLEAN DEFAULT TRUE,
+            expires_at TIMESTAMP NULL,
+            INDEX idx_user_id (user_id),
+            INDEX idx_role_id (role_id),
+            INDEX idx_is_active (is_active),
+            INDEX idx_expires_at (expires_at),
+            UNIQUE KEY uk_user_role (user_id, role_id),
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    )";
+
+    std::string createRoleMenusTable = R"(
+        CREATE TABLE IF NOT EXISTS role_menus (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            role_id INT NOT NULL,
+            menu_id INT NOT NULL,
+            is_granted BOOLEAN DEFAULT TRUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            created_by INT,
+            INDEX idx_role_id (role_id),
+            INDEX idx_menu_id (menu_id),
+            INDEX idx_is_granted (is_granted),
+            UNIQUE KEY uk_role_menu (role_id, menu_id),
+            FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
+            FOREIGN KEY (menu_id) REFERENCES menus(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    )";
+
     std::string createIndexes = R"(
         CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
         CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
@@ -151,11 +235,62 @@ bool DatabaseManager::createTables() {
         return false;
     }
 
-    // 创建索引
-    //if (mysql_query(db, createIndexes.c_str()) != 0) {
-    //    LOG_ERROR("创建索引失败: " + std::string(mysql_error(db)));
-    //    return false;
-    //}
+    // 创建权限管理相关表
+    if (mysql_query(db, createRolesTable.c_str()) != 0) {
+        LOG_ERROR("创建roles表失败: " + std::string(mysql_error(db)));
+        return false;
+    }
+
+    if (mysql_query(db, createMenusTable.c_str()) != 0) {
+        LOG_ERROR("创建menus表失败: " + std::string(mysql_error(db)));
+        return false;
+    }
+
+    if (mysql_query(db, createUserRolesTable.c_str()) != 0) {
+        LOG_ERROR("创建user_roles表失败: " + std::string(mysql_error(db)));
+        return false;
+    }
+
+    if (mysql_query(db, createRoleMenusTable.c_str()) != 0) {
+        LOG_ERROR("创建role_menus表失败: " + std::string(mysql_error(db)));
+        return false;
+    }
+
+    // 创建用户权限视图
+    std::string createUserPermissionsView = R"(
+        CREATE OR REPLACE VIEW user_permissions AS
+        SELECT
+            u.id as user_id,
+            u.username,
+            r.id as role_id,
+            r.role_name,
+            r.role_code,
+            m.id as menu_id,
+            m.name as menu_name,
+            m.code as menu_code,
+            m.type as menu_type,
+            m.url,
+            m.permission_key,
+            rm.is_granted,
+            ur.is_active as role_active,
+            ur.expires_at
+        FROM users u
+        JOIN user_roles ur ON u.id = ur.user_id
+        JOIN roles r ON ur.role_id = r.id
+        JOIN role_menus rm ON r.id = rm.role_id
+        JOIN menus m ON rm.menu_id = m.id
+        WHERE u.is_active = TRUE
+            AND r.is_active = TRUE
+            AND ur.is_active = TRUE
+            AND m.is_active = TRUE
+            AND rm.is_granted = TRUE
+            AND (ur.expires_at IS NULL OR ur.expires_at > NOW());
+    )";
+
+    if (mysql_query(db, createUserPermissionsView.c_str()) != 0) {
+        LOG_ERROR("创建user_permissions视图失败: " + std::string(mysql_error(db)));
+        return false;
+    }
 
     return true;
 }

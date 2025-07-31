@@ -18,6 +18,7 @@ CLIHandler::CLIHandler()
     authManager = std::make_unique<AuthManager>(dbManager.get(), redisManager.get());  // ✅ 传递RedisManager
     minioClient = std::make_unique<MinioClient>();
     importExportManager = std::make_unique<ImportExportManager>(dbManager.get());  // ✅ 传参
+    permissionManager = std::make_unique<PermissionManager>(dbManager.get());  // ✅ 初始化权限管理器
 
     // 启动定时线程，定期清理过期会话（每60秒）
     cleanupThreadRunning = true;
@@ -85,9 +86,9 @@ bool CLIHandler::initialize() {
     
     // 初始化MinioClient
     qDebug() << "正在初始化MinIO客户端...";
-    qDebug() << "  Endpoint: " << QString::fromStdString(config->getMinioEndpoint());
-    qDebug() << "  Access Key: " << QString::fromStdString(config->getMinioAccessKey());
-    qDebug() << "  Bucket: " << QString::fromStdString(config->getMinioBucket());
+    qDebug() << "  Endpoint: " << QString::fromUtf8(config->getMinioEndpoint());
+    qDebug() << "  Access Key: " << QString::fromUtf8(config->getMinioAccessKey());
+    qDebug() << "  Bucket: " << QString::fromUtf8(config->getMinioBucket());
     qDebug() << "  Secure: " << (config->getMinioSecure() ? "true" : "false");
     
     bool minioOk = minioClient->initialize(
@@ -857,4 +858,78 @@ void CLIHandler::printUser(const User& user) {
     qDebug() << QString::fromUtf8("状态: " + user.is_active );
     qDebug() << QString::fromUtf8("创建时间: " + Utils::formatTimestamp(user.created_at));
     qDebug() << QString::fromUtf8("==================");
+}
+
+// ==================== 权限管理功能实现 ====================
+
+PermissionManager* CLIHandler::getPermissionManager() const {
+    return permissionManager.get();
+}
+
+Result<std::vector<Role>> CLIHandler::getUserRoles(int userId) {
+    if (!permissionManager) {
+        return Result<std::vector<Role>>::Error("权限管理器未初始化");
+    }
+    return permissionManager->getUserRoles(userId);
+}
+
+Result<bool> CLIHandler::assignRoleToUser(int userId, int roleId) {
+    if (!permissionManager) {
+        return Result<bool>::Error("权限管理器未初始化");
+    }
+
+    // 获取当前用户ID作为分配者
+    auto currentUser = getCurrentUserForUI();
+    int assignedBy = currentUser.first ? currentUser.second.id : 0;
+
+    return permissionManager->assignRoleToUser(userId, roleId, assignedBy);
+}
+
+Result<bool> CLIHandler::removeRoleFromUser(int userId, int roleId) {
+    if (!permissionManager) {
+        return Result<bool>::Error("权限管理器未初始化");
+    }
+    return permissionManager->removeRoleFromUser(userId, roleId);
+}
+
+Result<bool> CLIHandler::checkUserPermission(int userId, const std::string& permissionKey) {
+    if (!permissionManager) {
+        return Result<bool>::Error("权限管理器未初始化");
+    }
+    return permissionManager->hasPermission(userId, permissionKey);
+}
+
+Result<std::vector<Role>> CLIHandler::getAllRoles() {
+    if (!permissionManager) {
+        return Result<std::vector<Role>>::Error("权限管理器未初始化");
+    }
+    return permissionManager->getAllRoles();
+}
+
+Result<Role> CLIHandler::createRole(const std::string& roleName, const std::string& roleCode, const std::string& description) {
+    if (!permissionManager) {
+        return Result<Role>::Error("权限管理器未初始化");
+    }
+    return permissionManager->createRole(roleName, roleCode, description);
+}
+
+Result<std::vector<MenuItem>> CLIHandler::getAllMenus() {
+    if (!permissionManager) {
+        return Result<std::vector<MenuItem>>::Error("权限管理器未初始化");
+    }
+    return permissionManager->getAllMenus();
+}
+
+Result<bool> CLIHandler::grantMenuToRole(int roleId, int menuId) {
+    if (!permissionManager) {
+        return Result<bool>::Error("权限管理器未初始化");
+    }
+    return permissionManager->grantMenuToRole(roleId, menuId);
+}
+
+Result<bool> CLIHandler::revokeMenuFromRole(int roleId, int menuId) {
+    if (!permissionManager) {
+        return Result<bool>::Error("权限管理器未初始化");
+    }
+    return permissionManager->revokeMenuFromRole(roleId, menuId);
 }

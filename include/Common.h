@@ -66,6 +66,76 @@ struct DocumentShare {
     std::chrono::system_clock::time_point created_at;
 };
 
+// 权限管理相关结构体
+enum class MenuType {
+    DIRECTORY,  // 目录
+    MENU,       // 菜单页面
+    BUTTON      // 按钮权限
+};
+
+enum class ButtonType {
+    ADD,
+    EDIT,
+    DELETE_BTN,  // 避免与关键字冲突
+    VIEW,
+    EXPORT,
+    IMPORT,
+    CUSTOM
+};
+
+struct Role {
+    int id;
+    std::string role_name;
+    std::string role_code;
+    std::string description;
+    bool is_active;
+    bool is_system;
+    std::chrono::system_clock::time_point created_at;
+    std::chrono::system_clock::time_point updated_at;
+    int created_by;
+    int updated_by;
+};
+
+struct MenuItem {
+    int id;
+    std::string name;
+    std::string code;
+    int parent_id;
+    MenuType type;
+    std::string url;
+    std::string icon;
+    std::string permission_key;
+    ButtonType button_type;
+    int sort_order;
+    bool is_visible;
+    bool is_active;
+    std::string description;
+    std::chrono::system_clock::time_point created_at;
+    std::chrono::system_clock::time_point updated_at;
+    int created_by;
+    int updated_by;
+};
+
+struct UserRole {
+    int id;
+    int user_id;
+    int role_id;
+    std::chrono::system_clock::time_point assigned_at;
+    int assigned_by;
+    bool is_active;
+    std::chrono::system_clock::time_point expires_at;
+};
+
+struct RoleMenu {
+    int id;
+    int role_id;
+    int menu_id;
+    bool is_granted;
+    std::chrono::system_clock::time_point created_at;
+    std::chrono::system_clock::time_point updated_at;
+    int created_by;
+};
+
 struct Session {
     int userId;
     std::string username;

@@ -44,6 +44,7 @@ private:
     void showUserManagementPage();
     void showDocumentManagementPage();
     void showSharedDocumentsPage();
+    void showPermissionManagementDialog();
     void updateDocumentList();
     void updateSharedDocumentList();
     void onUploadDocumentClicked();
@@ -85,5 +86,8 @@ private slots:
     // 权限控制方法
     void updateMenuPermissions();
     bool hasPermission(const QString& permission);
+    
+    // 辅助方法
+    void showErrorDialog(const QString& title, const QString& message);
 };
 #endif // MAINWINDOW_H

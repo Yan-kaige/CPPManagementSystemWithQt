@@ -20,6 +20,8 @@
 #include "DocListDialog.h"
 #include "ChangePasswordDialog.h"
 #include "ShareDocumentDialog.h"
+#include "PermissionMacros.h"
+#include "PermissionDialog.h"
 #include <QFileDialog>
 #include <QDebug>
 #include <QKeyEvent>
@@ -28,6 +30,15 @@
 #include <QInputDialog>
 
 extern CLIHandler* g_cliHandler; // 假设有全局CLIHandler指针
+
+// 权限管理全局变量
+PermissionManager* g_permissionManager = nullptr;
+int g_currentUserId = 0;
+
+// 获取当前用户ID的函数实现
+int getCurrentUserId() {
+    return g_currentUserId;
+}
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -59,6 +70,11 @@ MainWindow::MainWindow(QWidget *parent)
     if (registerEmail) registerEmail->installEventFilter(this);
 
     // 注意：快捷键功能已通过事件过滤器实现，这里不再需要单独的快捷键
+
+    // 初始化权限管理器
+    if (g_cliHandler) {
+        g_permissionManager = g_cliHandler->getPermissionManager();
+    }
 
     // 初始化用户界面状态
     updateCurrentUserInfo();
@@ -120,6 +136,9 @@ void MainWindow::on_btnLogin_clicked()
         return;
     }
 
+
+
+
     QString username = usernameEdit->text();
     QString password = passwordEdit->text();
 
@@ -131,7 +150,7 @@ void MainWindow::on_btnLogin_clicked()
     qDebug() << username;
     qDebug() << password;
     try {
-        auto result = g_cliHandler->loginUser(username.toUtf8().toStdString(), password.toUtf8().toStdString());
+        auto result = g_cliHandler->loginUser(username.toUtf8().constData(), password.toUtf8().constData());
         if (result.success) {
             // 恢复欢迎页面的原始提示文字
             QLabel *welcomeDesc = findChild<QLabel*>("labelWelcomeDesc");
@@ -142,7 +161,7 @@ void MainWindow::on_btnLogin_clicked()
             updateCurrentUserInfo();
         }
         else {
-            QMessageBox::warning(this, "登录", "登录失败: " + QString::fromStdString(result.message));
+            showErrorDialog("登录失败", QString::fromStdString(result.message));
         }
     }
     catch (const std::length_error& e) {
@@ -177,7 +196,7 @@ void MainWindow::on_btnLogout_clicked()
         }
         updateCurrentUserInfo();
     } else {
-        QMessageBox::warning(this, "登出", "登出失败: " + QString::fromStdString(result.message));
+        showErrorDialog("登出失败", QString::fromStdString(result.message));
     }
 }
 
@@ -344,7 +363,7 @@ void MainWindow::on_btnRegisterUser_clicked()
         updateUserList();
         updateCurrentUserInfo();
     } else {
-        QMessageBox::warning(this, "注册", "注册失败: " + QString::fromStdString(result.message));
+        showErrorDialog("注册失败", QString::fromStdString(result.message));
     }
 }
 
@@ -372,6 +391,10 @@ void MainWindow::updateCurrentUserInfo()
     auto result = g_cliHandler->getCurrentUserForUI();
     if (result.first) {
         const User& user = result.second;
+
+        // 设置当前用户ID
+        g_currentUserId = user.id;
+
         if (labelCurrentUser) {
             labelCurrentUser->setText(QString("用户：%1\n邮箱：%2")
                 .arg(QString::fromUtf8(user.username), QString::fromUtf8(user.email)));
@@ -387,6 +410,9 @@ void MainWindow::updateCurrentUserInfo()
         updateMenuPermissions();
 
     } else {
+        // 清除当前用户ID
+        g_currentUserId = 0;
+
         if (labelCurrentUser) labelCurrentUser->setText("未登录");
         if (tabAuth) tabAuth->setVisible(true);
         if (btnChangePassword) btnChangePassword->setVisible(false);
@@ -432,7 +458,7 @@ void MainWindow::on_btnChangePasswordDialog_clicked()
             updateUserList();
             updateCurrentUserInfo();
         } else {
-            QMessageBox::warning(this, "修改密码", "密码修改失败: " + QString::fromStdString(result.message));
+            showErrorDialog("密码修改失败", QString::fromStdString(result.message));
         }
     }
 }
@@ -762,6 +788,12 @@ void MainWindow::setupMenuTree()
     userItem->setText(0, "用户管理");
     userItem->setData(0, Qt::UserRole, "user_management");
     userItem->setExpanded(true);
+
+    // 添加权限管理菜单项
+    QTreeWidgetItem *permissionItem = new QTreeWidgetItem(treeWidgetMenu);
+    permissionItem->setText(0, "权限管理");
+    permissionItem->setData(0, Qt::UserRole, "permission_management");
+    permissionItem->setExpanded(true);
 }
 
 void MainWindow::setupContentPages()
@@ -1029,6 +1061,8 @@ void MainWindow::onMenuItemClicked(QTreeWidgetItem *item, int column)
         showDocumentManagementPage();
     } else if (itemData == "shared_documents") {
         showSharedDocumentsPage();
+    } else if (itemData == "permission_management") {
+        showPermissionManagementDialog();
     }
 }
 
@@ -2096,4 +2130,37 @@ void MainWindow::updateUserTableWithData(QTableWidget *table, const std::vector<
     table->horizontalHeader()->setSectionResizeMode(5, QHeaderView::Fixed); // 操作列固定
 }
 
+void MainWindow::showPermissionManagementDialog()
+{
+    // 检查权限
+    if (!HAS_PERMISSION("permission:assign")) {
+        QMessageBox::warning(this, "权限不足", "您没有访问权限管理的权限");
+        return;
+    }
 
+    if (!g_cliHandler) {
+        QMessageBox::warning(this, "错误", "系统未初始化");
+        return;
+    }
+
+    PermissionDialog dialog(g_cliHandler, this);
+    dialog.exec();
+}
+
+void MainWindow::showErrorDialog(const QString& title, const QString& message)
+{
+    // 创建自定义消息框以支持更长的错误消息
+    QMessageBox msgBox(this);
+    msgBox.setIcon(QMessageBox::Warning);
+    msgBox.setWindowTitle(title);
+    msgBox.setText(title);
+    msgBox.setInformativeText(message);
+    msgBox.setStandardButtons(QMessageBox::Ok);
+    msgBox.setDefaultButton(QMessageBox::Ok);
+    
+    // 设置最小宽度以确保消息完整显示
+    msgBox.setMinimumWidth(400);
+    msgBox.adjustSize();
+    
+    msgBox.exec();
+}

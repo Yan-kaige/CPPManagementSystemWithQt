@@ -6,6 +6,7 @@
 #include "RedisManager.h"
 #include "MinioClient.h"
 #include "ImportExportManager.h"
+#include "PermissionManager.h"
 #include "ConfigManager.h"
 #include "Logger.h"
 #include <atomic>
@@ -38,6 +39,8 @@ private:
     /** @brief 导入导出管理器 - 负责Excel/CSV文件处理 */
     std::unique_ptr<ImportExportManager> importExportManager;
 
+    /** @brief 权限管理器 - 负责角色和权限管理 */
+    std::unique_ptr<PermissionManager> permissionManager;
 
     /** @brief CLI运行状态标志 */
     bool running;
@@ -203,4 +206,36 @@ public:
 
     /** @brief 导出文档数据到Excel - 导出当前用户的文档信息 */
     Result<bool> exportDocumentsToExcel(const std::string& filePath, bool includeShared = false);
+
+    // ==================== 权限管理功能 ====================
+
+    /** @brief 获取权限管理器 - 供GUI使用 */
+    PermissionManager* getPermissionManager() const;
+
+    /** @brief 获取用户角色列表 */
+    Result<std::vector<Role>> getUserRoles(int userId);
+
+    /** @brief 为用户分配角色 */
+    Result<bool> assignRoleToUser(int userId, int roleId);
+
+    /** @brief 移除用户角色 */
+    Result<bool> removeRoleFromUser(int userId, int roleId);
+
+    /** @brief 检查用户权限 */
+    Result<bool> checkUserPermission(int userId, const std::string& permissionKey);
+
+    /** @brief 获取所有角色 */
+    Result<std::vector<Role>> getAllRoles();
+
+    /** @brief 创建角色 */
+    Result<Role> createRole(const std::string& roleName, const std::string& roleCode, const std::string& description);
+
+    /** @brief 获取所有菜单 */
+    Result<std::vector<MenuItem>> getAllMenus();
+
+    /** @brief 为角色授权菜单 */
+    Result<bool> grantMenuToRole(int roleId, int menuId);
+
+    /** @brief 撤销角色菜单权限 */
+    Result<bool> revokeMenuFromRole(int roleId, int menuId);
 };
