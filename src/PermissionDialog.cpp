@@ -183,6 +183,16 @@ void PermissionDialog::setupMenuPermissionTab()
     m_menuTree->setColumnWidth(0, 200);
     menuLayout->addWidget(m_menuTree);
     
+    // 添加保存权限按钮
+    QHBoxLayout* menuButtonLayout = new QHBoxLayout();
+    QPushButton* btnSavePermissions = new QPushButton("保存权限");
+    menuButtonLayout->addWidget(btnSavePermissions);
+    menuButtonLayout->addStretch();
+    menuLayout->addLayout(menuButtonLayout);
+    
+    // 连接保存权限信号
+    connect(btnSavePermissions, &QPushButton::clicked, this, &PermissionDialog::onSaveMenuPermissions);
+    
     m_menuSplitter->addWidget(menuWidget);
     m_menuSplitter->setSizes({300, 500});
     
@@ -196,7 +206,7 @@ void PermissionDialog::loadRoles()
 {
     if (!m_cliHandler) return;
     
-    auto result = m_cliHandler->getAllRoles();
+    auto result = m_cliHandler->getPermissionManager()->getAllRoles();
     if (result.success) {
         m_roles = result.data.value();
         refreshRoleList();
@@ -209,19 +219,19 @@ void PermissionDialog::loadUsers()
 {
     if (!m_cliHandler) return;
     
-    // 这里需要添加获取所有用户的方法
-    // auto result = m_cliHandler->getAllUsers();
-    // if (result.isSuccess()) {
-    //     m_users = result.getValue();
-    //     refreshUserList();
-    // }
+    try {
+        m_users = m_cliHandler->getAllUsersForUI();
+        refreshUserList();
+    } catch (const std::exception& e) {
+        QMessageBox::warning(this, "错误", QString("加载用户失败: %1").arg(e.what()));
+    }
 }
 
 void PermissionDialog::loadMenus()
 {
     if (!m_cliHandler) return;
     
-    auto result = m_cliHandler->getAllMenus();
+    auto result = m_cliHandler->getPermissionManager()->getAllMenus();
     if (result.success) {
         m_menus = result.data.value();
         refreshMenuTree();
@@ -260,7 +270,14 @@ void PermissionDialog::refreshRoleList()
 
 void PermissionDialog::refreshUserList()
 {
-    // 实现用户列表刷新
+    m_userTable->setRowCount(m_users.size());
+    
+    for (size_t i = 0; i < m_users.size(); ++i) {
+        const User& user = m_users[i];
+        m_userTable->setItem(i, 0, new QTableWidgetItem(QString::number(user.id)));
+        m_userTable->setItem(i, 1, new QTableWidgetItem(safeFromStdString(user.username)));
+        m_userTable->setItem(i, 2, new QTableWidgetItem(safeFromStdString(user.email)));
+    }
 }
 
 void PermissionDialog::refreshMenuTree()
@@ -344,7 +361,7 @@ void PermissionDialog::onCreateRole()
     if (dialog.exec() == QDialog::Accepted && dialog.isValid()) {
         Role newRole = dialog.getRole();
 
-        auto result = m_cliHandler->createRole(newRole.role_name, newRole.role_code, newRole.description);
+        auto result = m_cliHandler->getPermissionManager()->createRole(newRole.role_name, newRole.role_code, newRole.description);
         if (result.success) {
             QMessageBox::information(this, "成功", "角色创建成功");
             loadRoles();
@@ -407,7 +424,7 @@ void PermissionDialog::onAssignRole()
     int roleId = m_roleComboBox->currentData().toInt();
     if (roleId == 0) return;
 
-    auto result = m_cliHandler->assignRoleToUser(m_selectedUserId, roleId);
+    auto result = m_cliHandler->getPermissionManager()->assignRoleToUser(m_selectedUserId, roleId);
     if (result.success) {
         QMessageBox::information(this, "成功", "角色分配成功");
         loadUserRoles(m_selectedUserId);
@@ -428,7 +445,7 @@ void PermissionDialog::onRemoveRole()
 
     int roleId = item->text().toInt();
 
-    auto result = m_cliHandler->removeRoleFromUser(m_selectedUserId, roleId);
+    auto result = m_cliHandler->getPermissionManager()->removeRoleFromUser(m_selectedUserId, roleId);
     if (result.success) {
         QMessageBox::information(this, "成功", "角色移除成功");
         loadUserRoles(m_selectedUserId);
@@ -446,7 +463,7 @@ void PermissionDialog::loadUserRoles(int userId)
 {
     if (!m_cliHandler) return;
 
-    auto result = m_cliHandler->getUserRoles(userId);
+    auto result = m_cliHandler->getPermissionManager()->getUserRoles(userId);
     if (result.success) {
         const auto& roles = result.data.value();
 
@@ -462,7 +479,47 @@ void PermissionDialog::loadUserRoles(int userId)
 
 void PermissionDialog::loadRoleMenus(int roleId)
 {
-    // 实现角色菜单权限加载
+    if (!m_cliHandler) return;
+    
+    // 获取角色的菜单权限
+    auto result = m_cliHandler->getPermissionManager()->getRoleMenus(roleId);
+    if (result.success) {
+        const auto& roleMenus = result.data.value();
+        
+        // 更新菜单树的复选框状态
+        updateMenuTreeCheckboxes(roleMenus);
+    } else {
+        QMessageBox::warning(this, "错误", QString("加载角色菜单权限失败: %1").arg(QString::fromUtf8(result.message.c_str())));
+    }
+}
+
+void PermissionDialog::updateMenuTreeCheckboxes(const std::vector<MenuItem>& roleMenus)
+{
+    // 创建角色菜单ID集合，用于快速查找
+    std::set<int> roleMenuIds;
+    for (const auto& menu : roleMenus) {
+        roleMenuIds.insert(menu.id);
+    }
+    
+    // 更新菜单树中所有项的复选框状态
+    updateMenuTreeItemCheckboxes(m_menuTree->invisibleRootItem(), roleMenuIds);
+}
+
+void PermissionDialog::updateMenuTreeItemCheckboxes(QTreeWidgetItem* item, const std::set<int>& roleMenuIds)
+{
+    if (!item) return;
+    
+    // 检查当前项的复选框
+    QCheckBox* checkBox = qobject_cast<QCheckBox*>(m_menuTree->itemWidget(item, 1));
+    if (checkBox) {
+        int menuId = item->data(0, Qt::UserRole).toInt();
+        checkBox->setChecked(roleMenuIds.find(menuId) != roleMenuIds.end());
+    }
+    
+    // 递归更新子项
+    for (int i = 0; i < item->childCount(); ++i) {
+        updateMenuTreeItemCheckboxes(item->child(i), roleMenuIds);
+    }
 }
 
 void PermissionDialog::updateRoleMenuPermissions()
@@ -584,5 +641,44 @@ QString PermissionDialog::safeFromStdString(const std::string& str)
     } catch (...) {
         // 如果转换失败，返回空字符串
         return QString();
+    }
+}
+
+void PermissionDialog::onSaveMenuPermissions()
+{
+    if (m_selectedRoleId == 0) {
+        QMessageBox::warning(this, "错误", "请先选择一个角色");
+        return;
+    }
+    
+    // 收集选中的菜单权限
+    std::vector<int> selectedMenuIds;
+    collectSelectedMenuPermissions(m_menuTree->invisibleRootItem(), selectedMenuIds);
+    
+    // 保存角色菜单权限
+    auto result = m_cliHandler->getPermissionManager()->batchGrantMenusToRole(m_selectedRoleId, selectedMenuIds);
+    if (result.success) {
+        QMessageBox::information(this, "成功", "菜单权限保存成功");
+    } else {
+        QMessageBox::warning(this, "错误", QString("保存菜单权限失败: %1").arg(QString::fromUtf8(result.message.c_str())));
+    }
+}
+
+void PermissionDialog::collectSelectedMenuPermissions(QTreeWidgetItem* item, std::vector<int>& selectedMenuIds)
+{
+    if (!item) return;
+    
+    // 检查当前项的复选框
+    QCheckBox* checkBox = qobject_cast<QCheckBox*>(m_menuTree->itemWidget(item, 1));
+    if (checkBox && checkBox->isChecked()) {
+        int menuId = item->data(0, Qt::UserRole).toInt();
+        if (menuId > 0) {
+            selectedMenuIds.push_back(menuId);
+        }
+    }
+    
+    // 递归检查子项
+    for (int i = 0; i < item->childCount(); ++i) {
+        collectSelectedMenuPermissions(item->child(i), selectedMenuIds);
     }
 }

@@ -1044,7 +1044,14 @@ Result<std::vector<std::map<std::string, std::string>>> DatabaseManager::execute
     
     MYSQL_RES* result = mysql_store_result(db);
     if (!result) {
-        return Result<std::vector<std::map<std::string, std::string>>>::Error("获取查询结果失败: " + std::string(mysql_error(db)));
+        // 检查是否有错误
+        if (mysql_errno(db) != 0) {
+            return Result<std::vector<std::map<std::string, std::string>>>::Error("获取查询结果失败: " + std::string(mysql_error(db)));
+        }
+        // 如果没有错误，说明这是一个不返回结果集的查询（如INSERT、UPDATE、DELETE）
+        // 获取受影响的行数
+        my_ulonglong affectedRows = mysql_affected_rows(db);
+        return Result<std::vector<std::map<std::string, std::string>>>::Success(std::vector<std::map<std::string, std::string>>());
     }
     
     std::vector<std::map<std::string, std::string>> rows;

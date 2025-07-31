@@ -13,6 +13,7 @@
 #include <QCheckBox>
 #include <QTreeWidget>
 #include <QSplitter>
+#include <set>
 #include "Common.h"
 
 class CLIHandler;
@@ -34,6 +35,7 @@ private slots:
     void onAssignRole();
     void onRemoveRole();
     void onMenuPermissionChanged();
+    void onSaveMenuPermissions();
     void refreshRoleList();
     void refreshUserList();
     void refreshMenuTree();
@@ -49,6 +51,9 @@ private:
     void loadUserRoles(int userId);
     void loadRoleMenus(int roleId);
     void updateRoleMenuPermissions();
+    void updateMenuTreeCheckboxes(const std::vector<MenuItem>& roleMenus);
+    void updateMenuTreeItemCheckboxes(QTreeWidgetItem* item, const std::set<int>& roleMenuIds);
+    void collectSelectedMenuPermissions(QTreeWidgetItem* item, std::vector<int>& selectedMenuIds);
     
     // 安全的字符串转换函数
     QString safeFromStdString(const std::string& str);
