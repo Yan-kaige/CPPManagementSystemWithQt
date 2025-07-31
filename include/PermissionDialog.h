@@ -35,7 +35,11 @@ private slots:
     void onAssignRole();
     void onRemoveRole();
     void onMenuPermissionChanged();
+    void onMenuTreeItemChanged(QTreeWidgetItem* item, int column);
     void onSaveMenuPermissions();
+    void onSelectAllMenus();
+    void onUnselectAllMenus();
+    void onTestCheckboxes();
     void refreshRoleList();
     void refreshUserList();
     void refreshMenuTree();
@@ -54,6 +58,9 @@ private:
     void updateMenuTreeCheckboxes(const std::vector<MenuItem>& roleMenus);
     void updateMenuTreeItemCheckboxes(QTreeWidgetItem* item, const std::set<int>& roleMenuIds);
     void collectSelectedMenuPermissions(QTreeWidgetItem* item, std::vector<int>& selectedMenuIds);
+    void selectAllMenuItems(QTreeWidgetItem* item, bool selected);
+    void countMenuItems(QTreeWidgetItem* item, int& totalItems, int& itemsWithCheckboxes);
+    void showCheckboxStatus(QTreeWidgetItem* item, int currentDepth, int maxDepth);
     
     // 安全的字符串转换函数
     QString safeFromStdString(const std::string& str);

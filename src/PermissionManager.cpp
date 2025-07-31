@@ -733,14 +733,47 @@ Result<bool> PermissionManager::batchGrantMenusToRole(int roleId, const std::vec
         return Result<bool>::Error("数据库未连接");
     }
 
-    for (int menuId : menuIds) {
-        auto result = grantMenuToRole(roleId, menuId);
-        if (!result.success) {
-            return result; // 如果任何一个失败，返回错误
-        }
+    // 开始事务
+    if (!dbManager->beginTransaction()) {
+        return Result<bool>::Error("开始事务失败");
     }
 
-    return Result<bool>::Success(true);
+    try {
+        // 1. 先撤销该角色的所有菜单权限
+        std::string revokeSql = "UPDATE role_menus SET is_granted = FALSE WHERE role_id = " + std::to_string(roleId) + ";";
+        auto revokeResult = dbManager->executeQuery(revokeSql);
+        if (!revokeResult.success) {
+            dbManager->rollbackTransaction();
+            return Result<bool>::Error("撤销现有权限失败: " + revokeResult.message);
+        }
+
+        // 2. 为选中的菜单授予权限
+        for (int menuId : menuIds) {
+            std::string grantSql = "INSERT INTO role_menus (role_id, menu_id, is_granted) VALUES (" +
+                                  std::to_string(roleId) + ", " + std::to_string(menuId) + ", TRUE) "
+                                  "ON DUPLICATE KEY UPDATE is_granted = TRUE;";
+            
+            auto grantResult = dbManager->executeQuery(grantSql);
+            if (!grantResult.success) {
+                dbManager->rollbackTransaction();
+                return Result<bool>::Error("授予菜单权限失败: " + grantResult.message);
+            }
+        }
+
+        // 3. 提交事务
+        if (!dbManager->commitTransaction()) {
+            dbManager->rollbackTransaction();
+            return Result<bool>::Error("提交事务失败");
+        }
+
+        // 清除相关缓存
+        clearCache();
+
+        return Result<bool>::Success(true);
+    } catch (const std::exception& e) {
+        dbManager->rollbackTransaction();
+        return Result<bool>::Error("批量授权菜单权限时发生异常: " + std::string(e.what()));
+    }
 }
 
 // 静态辅助方法

@@ -6,6 +6,7 @@
 #include <QGroupBox>
 #include <QGridLayout>
 #include <QFormLayout>
+#include <QDebug>
 
 PermissionDialog::PermissionDialog(CLIHandler* cliHandler, QWidget *parent)
     : QDialog(parent)
@@ -167,7 +168,13 @@ void PermissionDialog::setupMenuPermissionTab()
     QStringList roleHeaders = {"角色名称", "角色编码"};
     m_roleListTable->setHorizontalHeaderLabels(roleHeaders);
     m_roleListTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+    m_roleListTable->horizontalHeader()->setStretchLastSection(true);
     roleLayout->addWidget(m_roleListTable);
+    
+    // 添加角色选择提示
+    QLabel* roleHintLabel = new QLabel("请选择一个角色来管理其菜单权限");
+    roleHintLabel->setStyleSheet("color: gray; font-size: 10px;");
+    roleLayout->addWidget(roleHintLabel);
     
     m_menuSplitter->addWidget(roleWidget);
     
@@ -179,18 +186,34 @@ void PermissionDialog::setupMenuPermissionTab()
     menuLayout->addWidget(menuLabel);
     
     m_menuTree = new QTreeWidget();
-    m_menuTree->setHeaderLabels({"菜单名称", "权限"});
-    m_menuTree->setColumnWidth(0, 200);
+    m_menuTree->setHeaderLabels({"菜单名称", "启用"});
+    m_menuTree->setColumnWidth(0, 250);
+    m_menuTree->setColumnWidth(1, 80);
+    m_menuTree->setAlternatingRowColors(true);
+    m_menuTree->setRootIsDecorated(true);
+    m_menuTree->setItemsExpandable(true);
     menuLayout->addWidget(m_menuTree);
     
-    // 添加保存权限按钮
+    // 添加操作按钮
     QHBoxLayout* menuButtonLayout = new QHBoxLayout();
+    
+    // 全选/取消全选按钮
+    QPushButton* btnSelectAll = new QPushButton("全选");
+    QPushButton* btnUnselectAll = new QPushButton("取消全选");
+    QPushButton* btnTestCheckboxes = new QPushButton("测试复选框");
     QPushButton* btnSavePermissions = new QPushButton("保存权限");
-    menuButtonLayout->addWidget(btnSavePermissions);
+    
+    menuButtonLayout->addWidget(btnSelectAll);
+    menuButtonLayout->addWidget(btnUnselectAll);
+    menuButtonLayout->addWidget(btnTestCheckboxes);
     menuButtonLayout->addStretch();
+    menuButtonLayout->addWidget(btnSavePermissions);
     menuLayout->addLayout(menuButtonLayout);
     
-    // 连接保存权限信号
+    // 连接信号
+    connect(btnSelectAll, &QPushButton::clicked, this, &PermissionDialog::onSelectAllMenus);
+    connect(btnUnselectAll, &QPushButton::clicked, this, &PermissionDialog::onUnselectAllMenus);
+    connect(btnTestCheckboxes, &QPushButton::clicked, this, &PermissionDialog::onTestCheckboxes);
     connect(btnSavePermissions, &QPushButton::clicked, this, &PermissionDialog::onSaveMenuPermissions);
     
     m_menuSplitter->addWidget(menuWidget);
@@ -200,6 +223,7 @@ void PermissionDialog::setupMenuPermissionTab()
     
     // 连接信号
     connect(m_roleListTable, &QTableWidget::itemSelectionChanged, this, &PermissionDialog::onRoleSelectionChanged);
+    connect(m_menuTree, &QTreeWidget::itemChanged, this, &PermissionDialog::onMenuTreeItemChanged);
 }
 
 void PermissionDialog::loadRoles()
@@ -292,9 +316,9 @@ void PermissionDialog::refreshMenuTree()
         item->setText(0, safeFromStdString(menu.name));
         item->setData(0, Qt::UserRole, menu.id);
         
-        // 添加权限复选框
-        QCheckBox* checkBox = new QCheckBox();
-        m_menuTree->setItemWidget(item, 1, checkBox);
+        // 设置复选框标志
+        item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+        item->setCheckState(1, Qt::Unchecked);
         
         itemMap[menu.id] = item;
         
@@ -309,6 +333,8 @@ void PermissionDialog::refreshMenuTree()
     }
     
     m_menuTree->expandAll();
+    
+    qDebug() << "菜单树刷新完成，共" << m_menus.size() << "个菜单项";
 }
 
 // 槽函数实现
@@ -329,6 +355,15 @@ void PermissionDialog::onRoleSelectionChanged()
         QTableWidgetItem* item = m_roleListTable->item(currentRow, 0);
         if (item) {
             m_selectedRoleId = item->data(Qt::UserRole).toInt();
+            QString roleName = item->text();
+            qDebug() << "选择角色ID:" << m_selectedRoleId << "角色名称:" << roleName;
+            
+            // 更新菜单权限标签，显示当前选中的角色
+            QLabel* menuLabel = m_menuPermissionWidget->findChild<QLabel*>();
+            if (menuLabel && menuLabel->text().startsWith("菜单权限")) {
+                menuLabel->setText(QString("菜单权限 - 当前角色: %1").arg(roleName));
+            }
+            
             loadRoleMenus(m_selectedRoleId);
         }
     }
@@ -456,7 +491,70 @@ void PermissionDialog::onRemoveRole()
 
 void PermissionDialog::onMenuPermissionChanged()
 {
-    // 实现菜单权限变更
+    // 当菜单权限发生变更时，可以在这里添加一些实时反馈
+    // 比如更新状态栏、显示变更提示等
+    qDebug() << "菜单权限发生变更";
+    
+    // 可以在这里添加一些视觉反馈，比如改变保存按钮的状态
+    // 或者显示"有未保存的变更"提示
+}
+
+void PermissionDialog::onMenuTreeItemChanged(QTreeWidgetItem* item, int column)
+{
+    if (!item || column != 1) return;
+    
+    int menuId = item->data(0, Qt::UserRole).toInt();
+    if (menuId > 0) {
+        Qt::CheckState state = item->checkState(1);
+        qDebug() << "菜单权限变更:" << item->text(0) << "ID:" << menuId 
+                 << "状态:" << (state == Qt::Checked ? "已选中" : "未选中");
+    }
+}
+
+void PermissionDialog::onSelectAllMenus()
+{
+    if (m_selectedRoleId == 0) {
+        QMessageBox::warning(this, "提示", "请先选择一个角色");
+        return;
+    }
+    
+    // 全选所有菜单
+    selectAllMenuItems(m_menuTree->invisibleRootItem(), true);
+    qDebug() << "全选所有菜单权限";
+}
+
+void PermissionDialog::onUnselectAllMenus()
+{
+    if (m_selectedRoleId == 0) {
+        QMessageBox::warning(this, "提示", "请先选择一个角色");
+        return;
+    }
+    
+    // 取消全选所有菜单
+    selectAllMenuItems(m_menuTree->invisibleRootItem(), false);
+    qDebug() << "取消全选所有菜单权限";
+}
+
+void PermissionDialog::onTestCheckboxes()
+{
+    qDebug() << "=== 测试复选框功能 ===";
+    
+    // 检查菜单树是否有项目
+    int totalItems = 0;
+    int itemsWithCheckboxes = 0;
+    
+    QTreeWidgetItem* rootItem = m_menuTree->invisibleRootItem();
+    countMenuItems(rootItem, totalItems, itemsWithCheckboxes);
+    
+    qDebug() << "菜单树总项目数:" << totalItems;
+    qDebug() << "有复选框的项目数:" << itemsWithCheckboxes;
+    
+    // 显示前几个菜单项的复选框状态
+    showCheckboxStatus(rootItem, 0, 5);
+    
+    QMessageBox::information(this, "测试结果", 
+        QString("菜单树总项目数: %1\n有复选框的项目数: %2")
+        .arg(totalItems).arg(itemsWithCheckboxes));
 }
 
 void PermissionDialog::loadUserRoles(int userId)
@@ -481,14 +579,18 @@ void PermissionDialog::loadRoleMenus(int roleId)
 {
     if (!m_cliHandler) return;
     
+    qDebug() << "加载角色菜单权限，角色ID:" << roleId;
+    
     // 获取角色的菜单权限
     auto result = m_cliHandler->getPermissionManager()->getRoleMenus(roleId);
     if (result.success) {
         const auto& roleMenus = result.data.value();
+        qDebug() << "获取到角色菜单数量:" << roleMenus.size();
         
         // 更新菜单树的复选框状态
         updateMenuTreeCheckboxes(roleMenus);
     } else {
+        qDebug() << "加载角色菜单权限失败:" << QString::fromUtf8(result.message.c_str());
         QMessageBox::warning(this, "错误", QString("加载角色菜单权限失败: %1").arg(QString::fromUtf8(result.message.c_str())));
     }
 }
@@ -499,21 +601,28 @@ void PermissionDialog::updateMenuTreeCheckboxes(const std::vector<MenuItem>& rol
     std::set<int> roleMenuIds;
     for (const auto& menu : roleMenus) {
         roleMenuIds.insert(menu.id);
+        qDebug() << "角色拥有菜单ID:" << menu.id << "菜单名称:" << menu.name;
     }
+    
+    qDebug() << "更新菜单树复选框，角色菜单ID数量:" << roleMenuIds.size();
     
     // 更新菜单树中所有项的复选框状态
     updateMenuTreeItemCheckboxes(m_menuTree->invisibleRootItem(), roleMenuIds);
+    
+    qDebug() << "菜单树复选框更新完成";
 }
 
 void PermissionDialog::updateMenuTreeItemCheckboxes(QTreeWidgetItem* item, const std::set<int>& roleMenuIds)
 {
     if (!item) return;
     
-    // 检查当前项的复选框
-    QCheckBox* checkBox = qobject_cast<QCheckBox*>(m_menuTree->itemWidget(item, 1));
-    if (checkBox) {
-        int menuId = item->data(0, Qt::UserRole).toInt();
-        checkBox->setChecked(roleMenuIds.find(menuId) != roleMenuIds.end());
+    // 检查当前项的复选框状态
+    int menuId = item->data(0, Qt::UserRole).toInt();
+    if (menuId > 0) {
+        bool shouldBeChecked = roleMenuIds.find(menuId) != roleMenuIds.end();
+        item->setCheckState(1, shouldBeChecked ? Qt::Checked : Qt::Unchecked);
+        
+        qDebug() << "菜单:" << item->text(0) << "ID:" << menuId << "状态:" << (shouldBeChecked ? "已选中" : "未选中");
     }
     
     // 递归更新子项
@@ -651,15 +760,24 @@ void PermissionDialog::onSaveMenuPermissions()
         return;
     }
     
+    qDebug() << "保存菜单权限，角色ID:" << m_selectedRoleId;
+    
     // 收集选中的菜单权限
     std::vector<int> selectedMenuIds;
     collectSelectedMenuPermissions(m_menuTree->invisibleRootItem(), selectedMenuIds);
     
+    qDebug() << "选中的菜单ID数量:" << selectedMenuIds.size();
+    for (int menuId : selectedMenuIds) {
+        qDebug() << "选中菜单ID:" << menuId;
+    }
+    
     // 保存角色菜单权限
     auto result = m_cliHandler->getPermissionManager()->batchGrantMenusToRole(m_selectedRoleId, selectedMenuIds);
     if (result.success) {
+        qDebug() << "菜单权限保存成功";
         QMessageBox::information(this, "成功", "菜单权限保存成功");
     } else {
+        qDebug() << "保存菜单权限失败:" << QString::fromUtf8(result.message.c_str());
         QMessageBox::warning(this, "错误", QString("保存菜单权限失败: %1").arg(QString::fromUtf8(result.message.c_str())));
     }
 }
@@ -668,17 +786,69 @@ void PermissionDialog::collectSelectedMenuPermissions(QTreeWidgetItem* item, std
 {
     if (!item) return;
     
-    // 检查当前项的复选框
-    QCheckBox* checkBox = qobject_cast<QCheckBox*>(m_menuTree->itemWidget(item, 1));
-    if (checkBox && checkBox->isChecked()) {
-        int menuId = item->data(0, Qt::UserRole).toInt();
-        if (menuId > 0) {
-            selectedMenuIds.push_back(menuId);
-        }
+    // 检查当前项的复选框状态
+    int menuId = item->data(0, Qt::UserRole).toInt();
+    if (menuId > 0 && item->checkState(1) == Qt::Checked) {
+        selectedMenuIds.push_back(menuId);
+        qDebug() << "收集到选中的菜单ID:" << menuId << "菜单名称:" << item->text(0);
     }
     
     // 递归检查子项
     for (int i = 0; i < item->childCount(); ++i) {
         collectSelectedMenuPermissions(item->child(i), selectedMenuIds);
+    }
+}
+
+void PermissionDialog::selectAllMenuItems(QTreeWidgetItem* item, bool selected)
+{
+    if (!item) return;
+    
+    // 设置当前项的复选框状态
+    int menuId = item->data(0, Qt::UserRole).toInt();
+    if (menuId > 0) {
+        item->setCheckState(1, selected ? Qt::Checked : Qt::Unchecked);
+    }
+    
+    // 递归设置子项
+    for (int i = 0; i < item->childCount(); ++i) {
+        selectAllMenuItems(item->child(i), selected);
+    }
+}
+
+void PermissionDialog::countMenuItems(QTreeWidgetItem* item, int& totalItems, int& itemsWithCheckboxes)
+{
+    if (!item) return;
+    
+    totalItems++;
+    
+    int menuId = item->data(0, Qt::UserRole).toInt();
+    if (menuId > 0) {
+        itemsWithCheckboxes++;
+    }
+    
+    // 递归统计子项
+    for (int i = 0; i < item->childCount(); ++i) {
+        countMenuItems(item->child(i), totalItems, itemsWithCheckboxes);
+    }
+}
+
+void PermissionDialog::showCheckboxStatus(QTreeWidgetItem* item, int currentDepth, int maxDepth)
+{
+    if (!item || currentDepth >= maxDepth) return;
+    
+    QString indent = QString("  ").repeated(currentDepth);
+    int menuId = item->data(0, Qt::UserRole).toInt();
+    
+    if (menuId > 0) {
+        Qt::CheckState state = item->checkState(1);
+        QString stateText = (state == Qt::Checked) ? "已选中" : "未选中";
+        qDebug() << indent << "菜单:" << item->text(0) << "复选框状态:" << stateText;
+    } else {
+        qDebug() << indent << "菜单:" << item->text(0) << "无复选框";
+    }
+    
+    // 递归显示子项
+    for (int i = 0; i < item->childCount(); ++i) {
+        showCheckboxStatus(item->child(i), currentDepth + 1, maxDepth);
     }
 }
