@@ -621,7 +621,15 @@ void MainWindow::setupNewUI()
     QWidget *leftPanel = new QWidget(this);
     leftPanel->setMinimumWidth(280);
     leftPanel->setMaximumWidth(380);
-    leftPanel->setStyleSheet("QWidget { background-color: #f8f9fa; border-right: 1px solid #e0e0e0; }");
+    leftPanel->setStyleSheet(
+        "QWidget { "
+        "   background: qlineargradient(x1:0, y1:0, x2:1, y2:0, "
+        "       stop:0 #f8f9fa, "
+        "       stop:0.5 #e9ecef, "
+        "       stop:1 #dee2e6); "
+        "   border-right: 1px solid #ced4da; "
+        "}"
+    );
 
     QVBoxLayout *leftLayout = new QVBoxLayout(leftPanel);
     leftLayout->setSpacing(10);
@@ -647,31 +655,33 @@ void MainWindow::setupNewUI()
     tabAuth->setObjectName("tabWidgetAuth");
     tabAuth->setStyleSheet(
         "QTabWidget::pane { "
-            "border: 1px solid #d0d0d0; "
-            "border-radius: 8px; "
-            "background-color: white; "
+            "border: 1px solid #ced4da; "
+            "border-radius: 10px; "
+            "background: rgba(255, 255, 255, 0.9); "
             "margin-top: -1px; "
+
         "}"
         "QTabBar::tab { "
-            "background: #f5f5f5; "
-            "border: 1px solid #d0d0d0; "
-            "padding: 10px 20px; "
+            "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, "
+            "   stop:0 #e9ecef, stop:1 #dee2e6); "
+            "border: 1px solid #ced4da; "
+            "padding: 12px 24px; "
             "margin-right: 2px; "
             "border-bottom: none; "
-            "border-top-left-radius: 6px; "
-            "border-top-right-radius: 6px; "
-            "color: #666; "
+            "border-top-left-radius: 8px; "
+            "border-top-right-radius: 8px; "
+            "color: #495057; "
             "font-weight: 500; "
         "}"
         "QTabBar::tab:selected { "
-            "background: white; "
-            "color: #333; "
-            "border-bottom: 1px solid white; "
+            "background: rgba(255, 255, 255, 0.95); "
+            "color: #2c3e50; "
+            "border-bottom: 1px solid rgba(255, 255, 255, 0.95); "
             "font-weight: bold; "
         "}"
         "QTabBar::tab:hover:!selected { "
-            "background: #e8e8e8; "
-            "color: #333; "
+            "background: rgba(255, 255, 255, 0.7); "
+            "color: #2c3e50; "
         "}"
         "QTabWidget QWidget { "
             "border: none; "
@@ -733,10 +743,11 @@ void MainWindow::setupNewUI()
     loginCaptchaLabel->setObjectName("labelLoginCaptcha");
     loginCaptchaLabel->setMinimumSize(80, 30);
     loginCaptchaLabel->setMaximumSize(80, 30);
-    loginCaptchaLabel->setStyleSheet("QLabel { border: 1px solid #ccc; background-color: #f0f0f0; padding: 1px; cursor: pointer; }");
+    loginCaptchaLabel->setStyleSheet("QLabel { border: 1px solid #ccc; background-color: #f0f0f0; padding: 1px; }");
     loginCaptchaLabel->setAlignment(Qt::AlignCenter);
     loginCaptchaLabel->setVisible(false);
     loginCaptchaLabel->setToolTip("点击刷新验证码");
+    loginCaptchaLabel->setCursor(Qt::PointingHandCursor);
     
     // 移除刷新按钮，改为点击图片刷新
     
@@ -827,10 +838,11 @@ void MainWindow::setupNewUI()
     registerCaptchaLabel->setObjectName("labelRegisterCaptcha");
     registerCaptchaLabel->setMinimumSize(80, 30);
     registerCaptchaLabel->setMaximumSize(80, 30);
-    registerCaptchaLabel->setStyleSheet("QLabel { border: 1px solid #ccc; background-color: #f0f0f0; padding: 1px; cursor: pointer; }");
+    registerCaptchaLabel->setStyleSheet("QLabel { border: 1px solid #ccc; background-color: #f0f0f0; padding: 1px; }");
     registerCaptchaLabel->setAlignment(Qt::AlignCenter);
     registerCaptchaLabel->setVisible(false);
     registerCaptchaLabel->setToolTip("点击刷新验证码");
+    registerCaptchaLabel->setCursor(Qt::PointingHandCursor);
     
     // 移除刷新按钮，改为点击图片刷新
     
@@ -864,11 +876,46 @@ void MainWindow::setupNewUI()
 
     // 创建右侧内容区域
     stackedWidgetContent = new QStackedWidget(this);
-    stackedWidgetContent->setStyleSheet("QStackedWidget { background-color: white; }");
+    stackedWidgetContent->setStyleSheet(
+        "QStackedWidget { "
+        "   background: qlineargradient(x1:0, y1:0, x2:0, y2:1, "
+        "       stop:0 #ffffff, "
+        "       stop:0.5 #f8f9fa, "
+        "       stop:1 #e9ecef); "
+        "   border-left: 1px solid #dee2e6; "
+        "}"
+    );
 
     // 欢迎页面
     QWidget *welcomePage = new QWidget();
-    welcomePage->setStyleSheet("QWidget { background-color: white; }");
+    
+    // 尝试加载背景图片
+    QPixmap bgPixmap("img/document_bg.png");
+    if (!bgPixmap.isNull()) {
+        // 图片加载成功，使用图片背景
+        welcomePage->setStyleSheet(
+            "QWidget { "
+            "   background-image: url(img/document_bg.png); "
+            "   background-position: center; "
+            "   background-repeat: no-repeat; "
+            "   background-color: rgba(255, 255, 255, 0.85); "
+            "   border-radius: 10px; "
+            "}"
+        );
+    } else {
+        // 图片加载失败，使用渐变背景作为备选
+        welcomePage->setStyleSheet(
+            "QWidget { "
+            "   background: qlineargradient(x1:0, y1:0, x2:1, y2:1, "
+            "       stop:0 #f8f9fa, "
+            "       stop:0.3 #e9ecef, "
+            "       stop:0.7 #dee2e6, "
+            "       stop:1 #ced4da); "
+            "   border-radius: 10px; "
+            "}"
+        );
+        qDebug() << "无法加载背景图片: img/document_bg.png";
+    }
     QVBoxLayout *welcomeLayout = new QVBoxLayout(welcomePage);
     welcomeLayout->setContentsMargins(50, 50, 50, 50);
     welcomeLayout->addStretch();
@@ -876,13 +923,32 @@ void MainWindow::setupNewUI()
     QLabel *welcomeLabel = new QLabel("欢迎使用文档管理系统", this);
     welcomeLabel->setObjectName("labelWelcome");
     welcomeLabel->setAlignment(Qt::AlignCenter);
-    welcomeLabel->setStyleSheet("font-size: 28px; font-weight: bold; color: #333; margin-bottom: 20px;");
+    welcomeLabel->setStyleSheet(
+        "font-size: 32px; "
+        "font-weight: bold; "
+        "color: #2c3e50; "
+        "margin-bottom: 20px; "
+
+        "background: rgba(255,255,255,0.8); "
+        "padding: 15px; "
+        "border-radius: 8px; "
+        "border: 1px solid rgba(255,255,255,0.3);"
+    );
     welcomeLayout->addWidget(welcomeLabel);
 
     QLabel *welcomeDesc = new QLabel("请先登录以使用系统功能", this);
     welcomeDesc->setObjectName("labelWelcomeDesc");
     welcomeDesc->setAlignment(Qt::AlignCenter);
-    welcomeDesc->setStyleSheet("font-size: 16px; color: #666; margin-top: 10px;");
+    welcomeDesc->setStyleSheet(
+        "font-size: 18px; "
+        "color: #34495e; "
+        "margin-top: 15px; "
+
+        "background: rgba(255,255,255,0.6); "
+        "padding: 10px; "
+        "border-radius: 6px; "
+        "border: 1px solid rgba(255,255,255,0.2);"
+    );
     welcomeLayout->addWidget(welcomeDesc);
 
     welcomeLayout->addStretch();

@@ -51,3 +51,5 @@ release/
 testcppqt.vcxproj.user
 config.json
 testcppqt.sln
+object_script.testcppqt.Debug
+object_script.testcppqt.Release

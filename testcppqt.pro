@@ -84,6 +84,11 @@ HEADERS += \
 # -----------------------------------
 FORMS += mainwindow.ui
 
+# -----------------------------------
+# 资源文件
+# -----------------------------------
+RESOURCES += resources.qrc
+
 
 CONFIG_FILES += config/config.json
 
