@@ -725,15 +725,15 @@ void MainWindow::setupNewUI()
     loginCaptchaEdit = new QLineEdit(this);
     loginCaptchaEdit->setObjectName("lineEditLoginCaptcha");
     loginCaptchaEdit->setMinimumHeight(30);
-    loginCaptchaEdit->setMaximumWidth(100);
+    loginCaptchaEdit->setMaximumWidth(120);
     loginCaptchaEdit->setPlaceholderText("验证码");
     loginCaptchaEdit->setVisible(false);
     
     loginCaptchaLabel = new QLabel(this);
     loginCaptchaLabel->setObjectName("labelLoginCaptcha");
-    loginCaptchaLabel->setMinimumSize(120, 40);
-    loginCaptchaLabel->setMaximumSize(120, 40);
-    loginCaptchaLabel->setStyleSheet("QLabel { border: 1px solid #ccc; background-color: #f0f0f0; padding: 2px; cursor: pointer; }");
+    loginCaptchaLabel->setMinimumSize(80, 30);
+    loginCaptchaLabel->setMaximumSize(80, 30);
+    loginCaptchaLabel->setStyleSheet("QLabel { border: 1px solid #ccc; background-color: #f0f0f0; padding: 1px; cursor: pointer; }");
     loginCaptchaLabel->setAlignment(Qt::AlignCenter);
     loginCaptchaLabel->setVisible(false);
     loginCaptchaLabel->setToolTip("点击刷新验证码");
@@ -819,15 +819,15 @@ void MainWindow::setupNewUI()
     registerCaptchaEdit = new QLineEdit(this);
     registerCaptchaEdit->setObjectName("lineEditRegisterCaptcha");
     registerCaptchaEdit->setMinimumHeight(30);
-    registerCaptchaEdit->setMaximumWidth(100);
+    registerCaptchaEdit->setMaximumWidth(120);
     registerCaptchaEdit->setPlaceholderText("验证码");
     registerCaptchaEdit->setVisible(false);
     
     registerCaptchaLabel = new QLabel(this);
     registerCaptchaLabel->setObjectName("labelRegisterCaptcha");
-    registerCaptchaLabel->setMinimumSize(120, 40);
-    registerCaptchaLabel->setMaximumSize(120, 40);
-    registerCaptchaLabel->setStyleSheet("QLabel { border: 1px solid #ccc; background-color: #f0f0f0; padding: 2px; cursor: pointer; }");
+    registerCaptchaLabel->setMinimumSize(80, 30);
+    registerCaptchaLabel->setMaximumSize(80, 30);
+    registerCaptchaLabel->setStyleSheet("QLabel { border: 1px solid #ccc; background-color: #f0f0f0; padding: 1px; cursor: pointer; }");
     registerCaptchaLabel->setAlignment(Qt::AlignCenter);
     registerCaptchaLabel->setVisible(false);
     registerCaptchaLabel->setToolTip("点击刷新验证码");
@@ -2325,22 +2325,22 @@ QString MainWindow::generateCaptchaCode()
 
 QPixmap MainWindow::generateCaptchaImage(const QString& code)
 {
-    // 创建验证码图像
-    QPixmap pixmap(120, 40);
+    // 创建验证码图像 - 减小尺寸
+    QPixmap pixmap(80, 30);
     pixmap.fill(Qt::white);
     
     QPainter painter(&pixmap);
     painter.setRenderHint(QPainter::Antialiasing);
     
-    // 设置字体
-    QFont font("Arial", 18, QFont::Bold);
+    // 设置字体 - 调整字体大小
+    QFont font("Arial", 14, QFont::Bold);
     painter.setFont(font);
     
-    // 绘制背景干扰点
-    for (int i = 0; i < 50; ++i) {
+    // 绘制背景干扰点 - 减少数量
+    for (int i = 0; i < 30; ++i) {
         int x = QRandomGenerator::global()->bounded(pixmap.width());
         int y = QRandomGenerator::global()->bounded(pixmap.height());
-        int size = QRandomGenerator::global()->bounded(3) + 1;
+        int size = QRandomGenerator::global()->bounded(2) + 1;
         QColor color(QRandomGenerator::global()->bounded(200), 
                     QRandomGenerator::global()->bounded(200), 
                     QRandomGenerator::global()->bounded(200));
@@ -2348,8 +2348,8 @@ QPixmap MainWindow::generateCaptchaImage(const QString& code)
         painter.drawPoint(x, y);
     }
     
-    // 绘制干扰线
-    for (int i = 0; i < 3; ++i) {
+    // 绘制干扰线 - 减少数量
+    for (int i = 0; i < 2; ++i) {
         int x1 = QRandomGenerator::global()->bounded(pixmap.width());
         int y1 = QRandomGenerator::global()->bounded(pixmap.height());
         int x2 = QRandomGenerator::global()->bounded(pixmap.width());
@@ -2374,8 +2374,8 @@ QPixmap MainWindow::generateCaptchaImage(const QString& code)
                         QRandomGenerator::global()->bounded(100));
         painter.setPen(textColor);
         
-        // 随机旋转角度
-        int rotation = QRandomGenerator::global()->bounded(30) - 15; // -15到15度
+        // 随机旋转角度 - 减小旋转范围
+        int rotation = QRandomGenerator::global()->bounded(20) - 10; // -10到10度
         
         painter.save();
         painter.translate(startX + i * (textWidth / code.length()) + 10, startY);
@@ -2384,8 +2384,8 @@ QPixmap MainWindow::generateCaptchaImage(const QString& code)
         painter.restore();
     }
     
-    // 添加更多干扰点
-    for (int i = 0; i < 30; ++i) {
+    // 添加更多干扰点 - 减少数量
+    for (int i = 0; i < 20; ++i) {
         int x = QRandomGenerator::global()->bounded(pixmap.width());
         int y = QRandomGenerator::global()->bounded(pixmap.height());
         QColor color(QRandomGenerator::global()->bounded(255), 
