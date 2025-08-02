@@ -46,6 +46,9 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
 
+    // 设置窗口最大化到桌面全屏
+    showMaximized();
+
     // 设置新的UI布局
     setupNewUI();
 
@@ -178,7 +181,6 @@ void MainWindow::on_btnLogout_clicked()
     }
     auto result = g_cliHandler->logoutUser();
     if (result.success) {
-        QMessageBox::information(this, "登出", "登出成功");
         // 清空用户表格
         QTableWidget *tableUsers = findChild<QTableWidget*>("tableWidgetUsers");
         if (tableUsers) {
