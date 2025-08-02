@@ -45,6 +45,8 @@ private:
     QLabel *registerCaptchaLabel;
     QPushButton *loginRefreshCaptchaBtn;
     QPushButton *registerRefreshCaptchaBtn;
+    QLabel *loginCaptchaLabelText;  // "验证码:" 标签
+    QLabel *registerCaptchaLabelText;  // "验证码:" 标签
     QString loginCaptchaCode;
     QString registerCaptchaCode;
     int loginFailCount;

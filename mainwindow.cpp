@@ -701,9 +701,10 @@ void MainWindow::setupNewUI()
 
     // 验证码行（初始隐藏）
     QHBoxLayout *captchaLayout = new QHBoxLayout();
-    QLabel *captchaLabel = new QLabel("验证码:", this);
-    captchaLabel->setMinimumWidth(60);
-    captchaLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    loginCaptchaLabelText = new QLabel("验证码:", this);
+    loginCaptchaLabelText->setMinimumWidth(60);
+    loginCaptchaLabelText->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    loginCaptchaLabelText->setVisible(false);
     
     loginCaptchaEdit = new QLineEdit(this);
     loginCaptchaEdit->setObjectName("lineEditLoginCaptcha");
@@ -726,7 +727,7 @@ void MainWindow::setupNewUI()
     loginRefreshCaptchaBtn->setMaximumWidth(50);
     loginRefreshCaptchaBtn->setVisible(false);
     
-    captchaLayout->addWidget(captchaLabel);
+    captchaLayout->addWidget(loginCaptchaLabelText);
     captchaLayout->addWidget(loginCaptchaEdit);
     captchaLayout->addWidget(loginCaptchaLabel);
     captchaLayout->addWidget(loginRefreshCaptchaBtn);
@@ -798,9 +799,10 @@ void MainWindow::setupNewUI()
 
     // 验证码行（初始隐藏）
     QHBoxLayout *regCaptchaLayout = new QHBoxLayout();
-    QLabel *regCaptchaLabel = new QLabel("验证码:", this);
-    regCaptchaLabel->setMinimumWidth(60);
-    regCaptchaLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    registerCaptchaLabelText = new QLabel("验证码:", this);
+    registerCaptchaLabelText->setMinimumWidth(60);
+    registerCaptchaLabelText->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    registerCaptchaLabelText->setVisible(false);
     
     registerCaptchaEdit = new QLineEdit(this);
     registerCaptchaEdit->setObjectName("lineEditRegisterCaptcha");
@@ -823,7 +825,7 @@ void MainWindow::setupNewUI()
     registerRefreshCaptchaBtn->setMaximumWidth(50);
     registerRefreshCaptchaBtn->setVisible(false);
     
-    regCaptchaLayout->addWidget(regCaptchaLabel);
+    regCaptchaLayout->addWidget(registerCaptchaLabelText);
     regCaptchaLayout->addWidget(registerCaptchaEdit);
     regCaptchaLayout->addWidget(registerCaptchaLabel);
     regCaptchaLayout->addWidget(registerRefreshCaptchaBtn);
@@ -2313,9 +2315,10 @@ QString MainWindow::generateCaptchaCode()
 
 void MainWindow::showLoginCaptcha()
 {
-    if (loginCaptchaEdit && loginCaptchaLabel && loginRefreshCaptchaBtn) {
+    if (loginCaptchaEdit && loginCaptchaLabel && loginRefreshCaptchaBtn && loginCaptchaLabelText) {
         loginCaptchaCode = generateCaptchaCode();
         loginCaptchaLabel->setText(loginCaptchaCode);
+        loginCaptchaLabelText->setVisible(true);
         loginCaptchaEdit->setVisible(true);
         loginCaptchaLabel->setVisible(true);
         loginRefreshCaptchaBtn->setVisible(true);
@@ -2326,9 +2329,10 @@ void MainWindow::showLoginCaptcha()
 
 void MainWindow::showRegisterCaptcha()
 {
-    if (registerCaptchaEdit && registerCaptchaLabel && registerRefreshCaptchaBtn) {
+    if (registerCaptchaEdit && registerCaptchaLabel && registerRefreshCaptchaBtn && registerCaptchaLabelText) {
         registerCaptchaCode = generateCaptchaCode();
         registerCaptchaLabel->setText(registerCaptchaCode);
+        registerCaptchaLabelText->setVisible(true);
         registerCaptchaEdit->setVisible(true);
         registerCaptchaLabel->setVisible(true);
         registerRefreshCaptchaBtn->setVisible(true);
@@ -2339,7 +2343,8 @@ void MainWindow::showRegisterCaptcha()
 
 void MainWindow::hideLoginCaptcha()
 {
-    if (loginCaptchaEdit && loginCaptchaLabel && loginRefreshCaptchaBtn) {
+    if (loginCaptchaEdit && loginCaptchaLabel && loginRefreshCaptchaBtn && loginCaptchaLabelText) {
+        loginCaptchaLabelText->setVisible(false);
         loginCaptchaEdit->setVisible(false);
         loginCaptchaLabel->setVisible(false);
         loginRefreshCaptchaBtn->setVisible(false);
@@ -2349,7 +2354,8 @@ void MainWindow::hideLoginCaptcha()
 
 void MainWindow::hideRegisterCaptcha()
 {
-    if (registerCaptchaEdit && registerCaptchaLabel && registerRefreshCaptchaBtn) {
+    if (registerCaptchaEdit && registerCaptchaLabel && registerRefreshCaptchaBtn && registerCaptchaLabelText) {
+        registerCaptchaLabelText->setVisible(false);
         registerCaptchaEdit->setVisible(false);
         registerCaptchaLabel->setVisible(false);
         registerRefreshCaptchaBtn->setVisible(false);
