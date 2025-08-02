@@ -161,7 +161,7 @@ void MainWindow::on_btnLogin_clicked()
             updateCurrentUserInfo();
         }
         else {
-            showErrorDialog("登录失败", QString::fromStdString(result.message));
+            showErrorDialog("登录失败", QString::fromUtf8(result.message));
         }
     }
     catch (const std::length_error& e) {
@@ -196,7 +196,7 @@ void MainWindow::on_btnLogout_clicked()
         }
         updateCurrentUserInfo();
     } else {
-        showErrorDialog("登出失败", QString::fromStdString(result.message));
+        showErrorDialog("登出失败", QString::fromUtf8(result.message));
     }
 }
 
@@ -287,7 +287,7 @@ void MainWindow::onDeleteUserClicked()
         updateUserList();
         updateCurrentUserInfo();
     } else {
-        QMessageBox::warning(this, "删除用户", "删除失败: " + QString::fromStdString(result.message));
+        QMessageBox::warning(this, "删除用户", "删除失败: " + QString::fromUtf8(result.message));
     }
 }
 
@@ -311,7 +311,7 @@ void MainWindow::onToggleUserActiveClicked()
             updateUserList();
             updateCurrentUserInfo();
         } else {
-            QMessageBox::warning(this, "禁用用户", "禁用失败: " + QString::fromStdString(result.message));
+            QMessageBox::warning(this, "禁用用户", "禁用失败: " + QString::fromUtf8(result.message));
         }
     } else {
         if (QMessageBox::question(this, "确认激活", QString("确定要激活用户ID %1 吗？").arg(userId)) != QMessageBox::Yes) {
@@ -323,7 +323,7 @@ void MainWindow::onToggleUserActiveClicked()
             updateUserList();
             updateCurrentUserInfo();
         } else {
-            QMessageBox::warning(this, "激活用户", "激活失败: " + QString::fromStdString(result.message));
+            QMessageBox::warning(this, "激活用户", "激活失败: " + QString::fromUtf8(result.message));
         }
     }
 }
@@ -363,7 +363,7 @@ void MainWindow::on_btnRegisterUser_clicked()
         updateUserList();
         updateCurrentUserInfo();
     } else {
-        showErrorDialog("注册失败", QString::fromStdString(result.message));
+        showErrorDialog("注册失败", QString::fromUtf8(result.message));
     }
 }
 
@@ -458,7 +458,7 @@ void MainWindow::on_btnChangePasswordDialog_clicked()
             updateUserList();
             updateCurrentUserInfo();
         } else {
-            showErrorDialog("密码修改失败", QString::fromStdString(result.message));
+            showErrorDialog("密码修改失败", QString::fromUtf8(result.message));
         }
     }
 }
@@ -1282,7 +1282,7 @@ void MainWindow::onExportDocumentsClicked()
                 if (result.success) {
                     QMessageBox::information(this, "导出成功", "文档列表已导出到: " + fileName);
                 } else {
-                    QMessageBox::warning(this, "导出失败", "导出文档列表时出现错误: " + QString::fromStdString(result.message));
+                    QMessageBox::warning(this, "导出失败", "导出文档列表时出现错误: " + QString::fromUtf8(result.message));
                 }
             }
         }
@@ -1424,7 +1424,7 @@ void MainWindow::updateDocumentTableWithData(QTableWidget *table, const std::vec
                     if (result.success) {
                         QMessageBox::information(this, "下载成功", "文档已保存到: " + fileName);
                     } else {
-                        QMessageBox::warning(this, "下载失败", "下载文档时出现错误: " + QString::fromStdString(result.message));
+                        QMessageBox::warning(this, "下载失败", "下载文档时出现错误: " + QString::fromUtf8(result.message));
                     }
                 } else {
                     QMessageBox::warning(this, "下载失败", "MinIO客户端未初始化");
@@ -1634,7 +1634,7 @@ void MainWindow::updateSharedDocumentTableWithData(QTableWidget *table, const st
                     if (result.success) {
                         QMessageBox::information(this, "下载成功", "文档已保存到: " + fileName);
                     } else {
-                        QMessageBox::warning(this, "下载失败", "下载文档时出现错误: " + QString::fromStdString(result.message));
+                        QMessageBox::warning(this, "下载失败", "下载文档时出现错误: " + QString::fromUtf8(result.message));
                     }
                 } else {
                     QMessageBox::warning(this, "下载失败", "MinIO客户端未初始化");
@@ -1739,7 +1739,7 @@ void MainWindow::on_btnExportUsers_clicked()
     if (result.success) {
         QMessageBox::information(this, "导出用户", "导出成功！");
     } else {
-        QMessageBox::warning(this, "导出用户", "导出失败: " + QString::fromStdString(result.message));
+        QMessageBox::warning(this, "导出用户", "导出失败: " + QString::fromUtf8(result.message));
     }
 }
 
@@ -1789,7 +1789,7 @@ void MainWindow::on_btnImportUsers_clicked()
         QMessageBox::information(this, "导入成功", "用户数据导入成功！");
         updateUserList();
     } else {
-        QMessageBox::warning(this, "导入失败", "用户数据导入失败: " + QString::fromStdString(result.message));
+        QMessageBox::warning(this, "导入失败", "用户数据导入失败: " + QString::fromUtf8(result.message));
     }
 }
 
@@ -1918,7 +1918,7 @@ void MainWindow::onAddUserClicked()
             addDialog.accept();
             updateUserList();
         } else {
-            QMessageBox::warning(&addDialog, "添加失败", "添加用户时出现错误: " + QString::fromStdString(result.message));
+            QMessageBox::warning(&addDialog, "添加失败", "添加用户时出现错误: " + QString::fromUtf8(result.message));
         }
     });
 
@@ -1938,7 +1938,7 @@ void MainWindow::onExportUsersClicked()
             if (result.success) {
                 QMessageBox::information(this, "导出成功", "用户列表已导出到: " + fileName);
             } else {
-                QMessageBox::warning(this, "导出失败", "导出用户列表时出现错误: " + QString::fromStdString(result.message));
+                QMessageBox::warning(this, "导出失败", "导出用户列表时出现错误: " + QString::fromUtf8(result.message));
             }
         }
     }
@@ -2068,7 +2068,7 @@ void MainWindow::updateUserTableWithData(QTableWidget *table, const std::vector<
                     editDialog.accept();
                     updateUserList();
                 } else {
-                    QMessageBox::warning(&editDialog, "编辑失败", "编辑用户时出现错误: " + QString::fromStdString(result.message));
+                    QMessageBox::warning(&editDialog, "编辑失败", "编辑用户时出现错误: " + QString::fromUtf8(result.message));
                 }
             });
 
@@ -2088,7 +2088,7 @@ void MainWindow::updateUserTableWithData(QTableWidget *table, const std::vector<
                     QMessageBox::information(this, "删除成功", "用户已删除");
                     updateUserList();
                 } else {
-                    QMessageBox::warning(this, "删除失败", "删除用户时出现错误: " + QString::fromStdString(result.message));
+                    QMessageBox::warning(this, "删除失败", "删除用户时出现错误: " + QString::fromUtf8(result.message));
                 }
             }
         });
@@ -2105,7 +2105,7 @@ void MainWindow::updateUserTableWithData(QTableWidget *table, const std::vector<
                 if (result.success) {
                     QMessageBox::information(this, "重置成功", "密码已重置为: 123456");
                 } else {
-                    QMessageBox::warning(this, "重置失败", "重置密码时出现错误: " + QString::fromStdString(result.message));
+                    QMessageBox::warning(this, "重置失败", "重置密码时出现错误: " + QString::fromUtf8(result.message));
                 }
             }
         });
@@ -2153,8 +2153,8 @@ void MainWindow::showErrorDialog(const QString& title, const QString& message)
     QMessageBox msgBox(this);
     msgBox.setIcon(QMessageBox::Warning);
     msgBox.setWindowTitle(title);
-    msgBox.setText(title);
-    msgBox.setInformativeText(message);
+    msgBox.setText(message);
+    //msgBox.setInformativeText(message);
     msgBox.setStandardButtons(QMessageBox::Ok);
     msgBox.setDefaultButton(QMessageBox::Ok);
     
