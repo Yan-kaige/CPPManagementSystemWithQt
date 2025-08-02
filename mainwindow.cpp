@@ -26,9 +26,12 @@
 #include <QDebug>
 #include <QKeyEvent>
 #include <QShortcut>
+#include <QMouseEvent>
 #include <QDateTime>
 #include <QInputDialog>
 #include <QRandomGenerator>
+#include <QPainter>
+#include <QFontMetrics>
 
 extern CLIHandler* g_cliHandler; // 假设有全局CLIHandler指针
 
@@ -134,6 +137,19 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
                 on_btnRegisterUser_clicked();
                 return true; // 事件已处理
             }
+        }
+    } else if (event->type() == QEvent::MouseButtonPress) {
+        QMouseEvent *mouseEvent = static_cast<QMouseEvent*>(event);
+        
+        // 处理验证码标签点击事件
+        if (obj == loginCaptchaLabel && mouseEvent->button() == Qt::LeftButton) {
+            refreshLoginCaptcha();
+            return true; // 事件已处理
+        }
+        
+        if (obj == registerCaptchaLabel && mouseEvent->button() == Qt::LeftButton) {
+            refreshRegisterCaptcha();
+            return true; // 事件已处理
         }
     }
 
@@ -715,22 +731,18 @@ void MainWindow::setupNewUI()
     
     loginCaptchaLabel = new QLabel(this);
     loginCaptchaLabel->setObjectName("labelLoginCaptcha");
-    loginCaptchaLabel->setMinimumSize(80, 30);
-    loginCaptchaLabel->setMaximumSize(80, 30);
-    loginCaptchaLabel->setStyleSheet("QLabel { border: 1px solid #ccc; background-color: #f0f0f0; padding: 5px; font-weight: bold; font-size: 14px; }");
+    loginCaptchaLabel->setMinimumSize(120, 40);
+    loginCaptchaLabel->setMaximumSize(120, 40);
+    loginCaptchaLabel->setStyleSheet("QLabel { border: 1px solid #ccc; background-color: #f0f0f0; padding: 2px; cursor: pointer; }");
     loginCaptchaLabel->setAlignment(Qt::AlignCenter);
     loginCaptchaLabel->setVisible(false);
+    loginCaptchaLabel->setToolTip("点击刷新验证码");
     
-    loginRefreshCaptchaBtn = new QPushButton("刷新", this);
-    loginRefreshCaptchaBtn->setObjectName("btnLoginRefreshCaptcha");
-    loginRefreshCaptchaBtn->setMinimumHeight(30);
-    loginRefreshCaptchaBtn->setMaximumWidth(50);
-    loginRefreshCaptchaBtn->setVisible(false);
+    // 移除刷新按钮，改为点击图片刷新
     
     captchaLayout->addWidget(loginCaptchaLabelText);
     captchaLayout->addWidget(loginCaptchaEdit);
     captchaLayout->addWidget(loginCaptchaLabel);
-    captchaLayout->addWidget(loginRefreshCaptchaBtn);
     captchaLayout->addStretch();
     loginLayout->addLayout(captchaLayout);
 
@@ -813,22 +825,18 @@ void MainWindow::setupNewUI()
     
     registerCaptchaLabel = new QLabel(this);
     registerCaptchaLabel->setObjectName("labelRegisterCaptcha");
-    registerCaptchaLabel->setMinimumSize(80, 30);
-    registerCaptchaLabel->setMaximumSize(80, 30);
-    registerCaptchaLabel->setStyleSheet("QLabel { border: 1px solid #ccc; background-color: #f0f0f0; padding: 5px; font-weight: bold; font-size: 14px; }");
+    registerCaptchaLabel->setMinimumSize(120, 40);
+    registerCaptchaLabel->setMaximumSize(120, 40);
+    registerCaptchaLabel->setStyleSheet("QLabel { border: 1px solid #ccc; background-color: #f0f0f0; padding: 2px; cursor: pointer; }");
     registerCaptchaLabel->setAlignment(Qt::AlignCenter);
     registerCaptchaLabel->setVisible(false);
+    registerCaptchaLabel->setToolTip("点击刷新验证码");
     
-    registerRefreshCaptchaBtn = new QPushButton("刷新", this);
-    registerRefreshCaptchaBtn->setObjectName("btnRegisterRefreshCaptcha");
-    registerRefreshCaptchaBtn->setMinimumHeight(30);
-    registerRefreshCaptchaBtn->setMaximumWidth(50);
-    registerRefreshCaptchaBtn->setVisible(false);
+    // 移除刷新按钮，改为点击图片刷新
     
     regCaptchaLayout->addWidget(registerCaptchaLabelText);
     regCaptchaLayout->addWidget(registerCaptchaEdit);
     regCaptchaLayout->addWidget(registerCaptchaLabel);
-    regCaptchaLayout->addWidget(registerRefreshCaptchaBtn);
     regCaptchaLayout->addStretch();
     registerLayout->addLayout(regCaptchaLayout);
 
@@ -899,8 +907,10 @@ void MainWindow::setupNewUI()
     connect(btnQuit, &QPushButton::clicked, this, &MainWindow::on_btnQuit_clicked);
     connect(btnChangePassword, &QPushButton::clicked, this, &MainWindow::on_btnChangePasswordDialog_clicked);
     connect(treeWidgetMenu, &QTreeWidget::itemClicked, this, &MainWindow::onMenuItemClicked);
-    connect(loginRefreshCaptchaBtn, &QPushButton::clicked, this, &MainWindow::refreshLoginCaptcha);
-    connect(registerRefreshCaptchaBtn, &QPushButton::clicked, this, &MainWindow::refreshRegisterCaptcha);
+    
+    // 为验证码标签安装事件过滤器，实现点击刷新
+    loginCaptchaLabel->installEventFilter(this);
+    registerCaptchaLabel->installEventFilter(this);
 }
 
 void MainWindow::setupMenuTree()
@@ -2313,15 +2323,91 @@ QString MainWindow::generateCaptchaCode()
     return captcha;
 }
 
+QPixmap MainWindow::generateCaptchaImage(const QString& code)
+{
+    // 创建验证码图像
+    QPixmap pixmap(120, 40);
+    pixmap.fill(Qt::white);
+    
+    QPainter painter(&pixmap);
+    painter.setRenderHint(QPainter::Antialiasing);
+    
+    // 设置字体
+    QFont font("Arial", 18, QFont::Bold);
+    painter.setFont(font);
+    
+    // 绘制背景干扰点
+    for (int i = 0; i < 50; ++i) {
+        int x = QRandomGenerator::global()->bounded(pixmap.width());
+        int y = QRandomGenerator::global()->bounded(pixmap.height());
+        int size = QRandomGenerator::global()->bounded(3) + 1;
+        QColor color(QRandomGenerator::global()->bounded(200), 
+                    QRandomGenerator::global()->bounded(200), 
+                    QRandomGenerator::global()->bounded(200));
+        painter.setPen(QPen(color, size));
+        painter.drawPoint(x, y);
+    }
+    
+    // 绘制干扰线
+    for (int i = 0; i < 3; ++i) {
+        int x1 = QRandomGenerator::global()->bounded(pixmap.width());
+        int y1 = QRandomGenerator::global()->bounded(pixmap.height());
+        int x2 = QRandomGenerator::global()->bounded(pixmap.width());
+        int y2 = QRandomGenerator::global()->bounded(pixmap.height());
+        QColor color(QRandomGenerator::global()->bounded(150), 
+                    QRandomGenerator::global()->bounded(150), 
+                    QRandomGenerator::global()->bounded(150));
+        painter.setPen(QPen(color, 1));
+        painter.drawLine(x1, y1, x2, y2);
+    }
+    
+    // 绘制验证码文字
+    QFontMetrics fm(font);
+    int textWidth = fm.horizontalAdvance(code);
+    int startX = (pixmap.width() - textWidth) / 2;
+    int startY = pixmap.height() / 2 + fm.ascent() / 2;
+    
+    for (int i = 0; i < code.length(); ++i) {
+        // 随机颜色
+        QColor textColor(QRandomGenerator::global()->bounded(100), 
+                        QRandomGenerator::global()->bounded(100), 
+                        QRandomGenerator::global()->bounded(100));
+        painter.setPen(textColor);
+        
+        // 随机旋转角度
+        int rotation = QRandomGenerator::global()->bounded(30) - 15; // -15到15度
+        
+        painter.save();
+        painter.translate(startX + i * (textWidth / code.length()) + 10, startY);
+        painter.rotate(rotation);
+        painter.drawText(0, 0, QString(code[i]));
+        painter.restore();
+    }
+    
+    // 添加更多干扰点
+    for (int i = 0; i < 30; ++i) {
+        int x = QRandomGenerator::global()->bounded(pixmap.width());
+        int y = QRandomGenerator::global()->bounded(pixmap.height());
+        QColor color(QRandomGenerator::global()->bounded(255), 
+                    QRandomGenerator::global()->bounded(255), 
+                    QRandomGenerator::global()->bounded(255));
+        painter.setPen(QPen(color, 1));
+        painter.drawPoint(x, y);
+    }
+    
+    painter.end();
+    return pixmap;
+}
+
 void MainWindow::showLoginCaptcha()
 {
-    if (loginCaptchaEdit && loginCaptchaLabel && loginRefreshCaptchaBtn && loginCaptchaLabelText) {
+    if (loginCaptchaEdit && loginCaptchaLabel && loginCaptchaLabelText) {
         loginCaptchaCode = generateCaptchaCode();
-        loginCaptchaLabel->setText(loginCaptchaCode);
+        QPixmap captchaPixmap = generateCaptchaImage(loginCaptchaCode);
+        loginCaptchaLabel->setPixmap(captchaPixmap);
         loginCaptchaLabelText->setVisible(true);
         loginCaptchaEdit->setVisible(true);
         loginCaptchaLabel->setVisible(true);
-        loginRefreshCaptchaBtn->setVisible(true);
         loginCaptchaEdit->clear();
         loginCaptchaEdit->setFocus();
     }
@@ -2329,13 +2415,13 @@ void MainWindow::showLoginCaptcha()
 
 void MainWindow::showRegisterCaptcha()
 {
-    if (registerCaptchaEdit && registerCaptchaLabel && registerRefreshCaptchaBtn && registerCaptchaLabelText) {
+    if (registerCaptchaEdit && registerCaptchaLabel && registerCaptchaLabelText) {
         registerCaptchaCode = generateCaptchaCode();
-        registerCaptchaLabel->setText(registerCaptchaCode);
+        QPixmap captchaPixmap = generateCaptchaImage(registerCaptchaCode);
+        registerCaptchaLabel->setPixmap(captchaPixmap);
         registerCaptchaLabelText->setVisible(true);
         registerCaptchaEdit->setVisible(true);
         registerCaptchaLabel->setVisible(true);
-        registerRefreshCaptchaBtn->setVisible(true);
         registerCaptchaEdit->clear();
         registerCaptchaEdit->setFocus();
     }
@@ -2343,22 +2429,20 @@ void MainWindow::showRegisterCaptcha()
 
 void MainWindow::hideLoginCaptcha()
 {
-    if (loginCaptchaEdit && loginCaptchaLabel && loginRefreshCaptchaBtn && loginCaptchaLabelText) {
+    if (loginCaptchaEdit && loginCaptchaLabel && loginCaptchaLabelText) {
         loginCaptchaLabelText->setVisible(false);
         loginCaptchaEdit->setVisible(false);
         loginCaptchaLabel->setVisible(false);
-        loginRefreshCaptchaBtn->setVisible(false);
         loginCaptchaEdit->clear();
     }
 }
 
 void MainWindow::hideRegisterCaptcha()
 {
-    if (registerCaptchaEdit && registerCaptchaLabel && registerRefreshCaptchaBtn && registerCaptchaLabelText) {
+    if (registerCaptchaEdit && registerCaptchaLabel && registerCaptchaLabelText) {
         registerCaptchaLabelText->setVisible(false);
         registerCaptchaEdit->setVisible(false);
         registerCaptchaLabel->setVisible(false);
-        registerRefreshCaptchaBtn->setVisible(false);
         registerCaptchaEdit->clear();
     }
 }
@@ -2367,7 +2451,8 @@ void MainWindow::refreshLoginCaptcha()
 {
     if (loginCaptchaLabel) {
         loginCaptchaCode = generateCaptchaCode();
-        loginCaptchaLabel->setText(loginCaptchaCode);
+        QPixmap captchaPixmap = generateCaptchaImage(loginCaptchaCode);
+        loginCaptchaLabel->setPixmap(captchaPixmap);
         if (loginCaptchaEdit) {
             loginCaptchaEdit->clear();
             loginCaptchaEdit->setFocus();
@@ -2379,7 +2464,8 @@ void MainWindow::refreshRegisterCaptcha()
 {
     if (registerCaptchaLabel) {
         registerCaptchaCode = generateCaptchaCode();
-        registerCaptchaLabel->setText(registerCaptchaCode);
+        QPixmap captchaPixmap = generateCaptchaImage(registerCaptchaCode);
+        registerCaptchaLabel->setPixmap(captchaPixmap);
         if (registerCaptchaEdit) {
             registerCaptchaEdit->clear();
             registerCaptchaEdit->setFocus();

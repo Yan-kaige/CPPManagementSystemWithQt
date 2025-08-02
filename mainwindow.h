@@ -43,8 +43,6 @@ private:
     QLineEdit *registerCaptchaEdit;
     QLabel *loginCaptchaLabel;
     QLabel *registerCaptchaLabel;
-    QPushButton *loginRefreshCaptchaBtn;
-    QPushButton *registerRefreshCaptchaBtn;
     QLabel *loginCaptchaLabelText;  // "验证码:" 标签
     QLabel *registerCaptchaLabelText;  // "验证码:" 标签
     QString loginCaptchaCode;
@@ -107,6 +105,7 @@ private slots:
     
     // 验证码相关方法
     QString generateCaptchaCode();
+    QPixmap generateCaptchaImage(const QString& code);
     void showLoginCaptcha();
     void showRegisterCaptcha();
     void hideLoginCaptcha();
