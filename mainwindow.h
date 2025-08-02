@@ -1,6 +1,7 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include <QLabel>
 #include <QMainWindow>
 #include <QTableWidget>
 #include <QLineEdit>
@@ -36,6 +37,18 @@ private:
     QWidget *pageUserManagement;
     QWidget *pageDocumentManagement;
     QWidget *pageSharedDocuments;
+
+    // 验证码相关组件 - 修复编译错误
+    QLineEdit *loginCaptchaEdit;
+    QLineEdit *registerCaptchaEdit;
+    QLabel *loginCaptchaLabel;
+    QLabel *registerCaptchaLabel;
+    QPushButton *loginRefreshCaptchaBtn;
+    QPushButton *registerRefreshCaptchaBtn;
+    QString loginCaptchaCode;
+    QString registerCaptchaCode;
+    int loginFailCount;
+    int registerFailCount;
 
     // 初始化方法
     void setupNewUI();
@@ -89,5 +102,14 @@ private slots:
     
     // 辅助方法
     void showErrorDialog(const QString& title, const QString& message);
+    
+    // 验证码相关方法
+    QString generateCaptchaCode();
+    void showLoginCaptcha();
+    void showRegisterCaptcha();
+    void hideLoginCaptcha();
+    void hideRegisterCaptcha();
+    void refreshLoginCaptcha();
+    void refreshRegisterCaptcha();
 };
 #endif // MAINWINDOW_H

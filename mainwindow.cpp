@@ -28,6 +28,7 @@
 #include <QShortcut>
 #include <QDateTime>
 #include <QInputDialog>
+#include <QRandomGenerator>
 
 extern CLIHandler* g_cliHandler; // 假设有全局CLIHandler指针
 
@@ -68,9 +69,13 @@ MainWindow::MainWindow(QWidget *parent)
     QLineEdit *registerUsername = findChild<QLineEdit*>("lineEditRegisterUsername");
     QLineEdit *registerPassword = findChild<QLineEdit*>("lineEditRegisterPassword");
     QLineEdit *registerEmail = findChild<QLineEdit*>("lineEditRegisterEmail");
+    QLineEdit *loginCaptcha = findChild<QLineEdit*>("lineEditLoginCaptcha");
+    QLineEdit *registerCaptcha = findChild<QLineEdit*>("lineEditRegisterCaptcha");
     if (registerUsername) registerUsername->installEventFilter(this);
     if (registerPassword) registerPassword->installEventFilter(this);
     if (registerEmail) registerEmail->installEventFilter(this);
+    if (loginCaptcha) loginCaptcha->installEventFilter(this);
+    if (registerCaptcha) registerCaptcha->installEventFilter(this);
 
     // 注意：快捷键功能已通过事件过滤器实现，这里不再需要单独的快捷键
 
@@ -78,6 +83,12 @@ MainWindow::MainWindow(QWidget *parent)
     if (g_cliHandler) {
         g_permissionManager = g_cliHandler->getPermissionManager();
     }
+
+    // 初始化验证码相关变量
+    loginFailCount = 0;
+    registerFailCount = 0;
+    loginCaptchaCode = "";
+    registerCaptchaCode = "";
 
     // 初始化用户界面状态
     updateCurrentUserInfo();
@@ -96,13 +107,15 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
         // 查找动态创建的组件
         QLineEdit *loginUsername = findChild<QLineEdit*>("lineEditLoginUsername");
         QLineEdit *loginPassword = findChild<QLineEdit*>("lineEditLoginPassword");
+        QLineEdit *loginCaptcha = findChild<QLineEdit*>("lineEditLoginCaptcha");
         QLineEdit *registerUsername = findChild<QLineEdit*>("lineEditRegisterUsername");
         QLineEdit *registerPassword = findChild<QLineEdit*>("lineEditRegisterPassword");
         QLineEdit *registerEmail = findChild<QLineEdit*>("lineEditRegisterEmail");
+        QLineEdit *registerCaptcha = findChild<QLineEdit*>("lineEditRegisterCaptcha");
         QTabWidget *tabAuth = findChild<QTabWidget*>("tabWidgetAuth");
 
-        // 如果在用户名或密码输入框中按下回车键，触发登录
-        if ((obj == loginUsername || obj == loginPassword) &&
+        // 如果在登录页面的输入框中按下回车键，触发登录
+        if ((obj == loginUsername || obj == loginPassword || obj == loginCaptcha) &&
             (keyEvent->key() == Qt::Key_Return || keyEvent->key() == Qt::Key_Enter)) {
 
             // 只有在登录页面可见时才触发登录
@@ -113,7 +126,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
         }
 
         // 如果在注册页面的输入框中按下回车键，触发注册
-        if ((obj == registerUsername || obj == registerPassword || obj == registerEmail) &&
+        if ((obj == registerUsername || obj == registerPassword || obj == registerEmail || obj == registerCaptcha) &&
             (keyEvent->key() == Qt::Key_Return || keyEvent->key() == Qt::Key_Enter)) {
 
             // 只有在注册页面可见时才触发注册
@@ -139,11 +152,23 @@ void MainWindow::on_btnLogin_clicked()
         return;
     }
 
-
-
-
     QString username = usernameEdit->text();
     QString password = passwordEdit->text();
+
+    // 如果验证码已显示，需要验证验证码
+    if (loginCaptchaEdit && loginCaptchaEdit->isVisible()) {
+        QString captchaInput = loginCaptchaEdit->text().trimmed();
+        if (captchaInput.isEmpty()) {
+            QMessageBox::warning(this, "验证码", "请输入验证码");
+            return;
+        }
+        if (captchaInput.toLower() != loginCaptchaCode.toLower()) {
+            QMessageBox::warning(this, "验证码错误", "验证码输入错误，请重新输入");
+            loginCaptchaEdit->clear();
+            refreshLoginCaptcha();
+            return;
+        }
+    }
 
     if (!g_cliHandler) {
         QMessageBox::critical(this, "错误", "CLIHandler 未初始化");
@@ -155,6 +180,10 @@ void MainWindow::on_btnLogin_clicked()
     try {
         auto result = g_cliHandler->loginUser(username.toUtf8().constData(), password.toUtf8().constData());
         if (result.success) {
+            // 登录成功，隐藏验证码并重置失败计数
+            hideLoginCaptcha();
+            loginFailCount = 0;
+            
             // 恢复欢迎页面的原始提示文字
             QLabel *welcomeDesc = findChild<QLabel*>("labelWelcomeDesc");
             if (welcomeDesc) {
@@ -164,13 +193,18 @@ void MainWindow::on_btnLogin_clicked()
             updateCurrentUserInfo();
         }
         else {
+            loginFailCount++;
             showErrorDialog("登录失败", QString::fromUtf8(result.message));
+            
+            // 第一次失败后显示验证码
+            if (loginFailCount == 1) {
+                showLoginCaptcha();
+            }
         }
     }
     catch (const std::length_error& e) {
         qDebug() << "长度错误: " << e.what();
     }
-
 }
 
 void MainWindow::on_btnLogout_clicked()
@@ -351,6 +385,21 @@ void MainWindow::on_btnRegisterUser_clicked()
     QString password = passwordEdit->text();
     QString email = emailEdit->text().trimmed();
 
+    // 如果验证码已显示，需要验证验证码
+    if (registerCaptchaEdit && registerCaptchaEdit->isVisible()) {
+        QString captchaInput = registerCaptchaEdit->text().trimmed();
+        if (captchaInput.isEmpty()) {
+            QMessageBox::warning(this, "验证码", "请输入验证码");
+            return;
+        }
+        if (captchaInput.toLower() != registerCaptchaCode.toLower()) {
+            QMessageBox::warning(this, "验证码错误", "验证码输入错误，请重新输入");
+            registerCaptchaEdit->clear();
+            refreshRegisterCaptcha();
+            return;
+        }
+    }
+
     if (username.isEmpty() || password.isEmpty() || email.isEmpty()) {
         QMessageBox::warning(this, "注册", "请填写完整的用户名、密码和邮箱");
         return;
@@ -358,6 +407,10 @@ void MainWindow::on_btnRegisterUser_clicked()
 
     auto result = g_cliHandler->registerUser(username.toUtf8().toStdString(), password.toUtf8().toStdString(), email.toUtf8().toStdString());
     if (result.success) {
+        // 注册成功，隐藏验证码并重置失败计数
+        hideRegisterCaptcha();
+        registerFailCount = 0;
+        
         QMessageBox::information(this, "注册", "注册成功！");
         usernameEdit->clear();
         passwordEdit->clear();
@@ -365,7 +418,13 @@ void MainWindow::on_btnRegisterUser_clicked()
         updateUserList();
         updateCurrentUserInfo();
     } else {
+        registerFailCount++;
         showErrorDialog("注册失败", QString::fromUtf8(result.message));
+        
+        // 第一次失败后显示验证码
+        if (registerFailCount == 1) {
+            showRegisterCaptcha();
+        }
     }
 }
 
@@ -640,6 +699,40 @@ void MainWindow::setupNewUI()
     passwordLayout->addWidget(loginPassword);
     loginLayout->addLayout(passwordLayout);
 
+    // 验证码行（初始隐藏）
+    QHBoxLayout *captchaLayout = new QHBoxLayout();
+    QLabel *captchaLabel = new QLabel("验证码:", this);
+    captchaLabel->setMinimumWidth(60);
+    captchaLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    
+    loginCaptchaEdit = new QLineEdit(this);
+    loginCaptchaEdit->setObjectName("lineEditLoginCaptcha");
+    loginCaptchaEdit->setMinimumHeight(30);
+    loginCaptchaEdit->setMaximumWidth(100);
+    loginCaptchaEdit->setPlaceholderText("验证码");
+    loginCaptchaEdit->setVisible(false);
+    
+    loginCaptchaLabel = new QLabel(this);
+    loginCaptchaLabel->setObjectName("labelLoginCaptcha");
+    loginCaptchaLabel->setMinimumSize(80, 30);
+    loginCaptchaLabel->setMaximumSize(80, 30);
+    loginCaptchaLabel->setStyleSheet("QLabel { border: 1px solid #ccc; background-color: #f0f0f0; padding: 5px; font-weight: bold; font-size: 14px; }");
+    loginCaptchaLabel->setAlignment(Qt::AlignCenter);
+    loginCaptchaLabel->setVisible(false);
+    
+    loginRefreshCaptchaBtn = new QPushButton("刷新", this);
+    loginRefreshCaptchaBtn->setObjectName("btnLoginRefreshCaptcha");
+    loginRefreshCaptchaBtn->setMinimumHeight(30);
+    loginRefreshCaptchaBtn->setMaximumWidth(50);
+    loginRefreshCaptchaBtn->setVisible(false);
+    
+    captchaLayout->addWidget(captchaLabel);
+    captchaLayout->addWidget(loginCaptchaEdit);
+    captchaLayout->addWidget(loginCaptchaLabel);
+    captchaLayout->addWidget(loginRefreshCaptchaBtn);
+    captchaLayout->addStretch();
+    loginLayout->addLayout(captchaLayout);
+
     // 登录按钮
     QPushButton *btnLogin = new QPushButton("登录", this);
     btnLogin->setObjectName("btnLogin");
@@ -703,6 +796,40 @@ void MainWindow::setupNewUI()
     regEmailLayout->addWidget(registerEmail);
     registerLayout->addLayout(regEmailLayout);
 
+    // 验证码行（初始隐藏）
+    QHBoxLayout *regCaptchaLayout = new QHBoxLayout();
+    QLabel *regCaptchaLabel = new QLabel("验证码:", this);
+    regCaptchaLabel->setMinimumWidth(60);
+    regCaptchaLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    
+    registerCaptchaEdit = new QLineEdit(this);
+    registerCaptchaEdit->setObjectName("lineEditRegisterCaptcha");
+    registerCaptchaEdit->setMinimumHeight(30);
+    registerCaptchaEdit->setMaximumWidth(100);
+    registerCaptchaEdit->setPlaceholderText("验证码");
+    registerCaptchaEdit->setVisible(false);
+    
+    registerCaptchaLabel = new QLabel(this);
+    registerCaptchaLabel->setObjectName("labelRegisterCaptcha");
+    registerCaptchaLabel->setMinimumSize(80, 30);
+    registerCaptchaLabel->setMaximumSize(80, 30);
+    registerCaptchaLabel->setStyleSheet("QLabel { border: 1px solid #ccc; background-color: #f0f0f0; padding: 5px; font-weight: bold; font-size: 14px; }");
+    registerCaptchaLabel->setAlignment(Qt::AlignCenter);
+    registerCaptchaLabel->setVisible(false);
+    
+    registerRefreshCaptchaBtn = new QPushButton("刷新", this);
+    registerRefreshCaptchaBtn->setObjectName("btnRegisterRefreshCaptcha");
+    registerRefreshCaptchaBtn->setMinimumHeight(30);
+    registerRefreshCaptchaBtn->setMaximumWidth(50);
+    registerRefreshCaptchaBtn->setVisible(false);
+    
+    regCaptchaLayout->addWidget(regCaptchaLabel);
+    regCaptchaLayout->addWidget(registerCaptchaEdit);
+    regCaptchaLayout->addWidget(registerCaptchaLabel);
+    regCaptchaLayout->addWidget(registerRefreshCaptchaBtn);
+    regCaptchaLayout->addStretch();
+    registerLayout->addLayout(regCaptchaLayout);
+
     // 注册按钮
     QPushButton *btnRegister = new QPushButton("注册", this);
     btnRegister->setObjectName("btnRegister");
@@ -761,6 +888,8 @@ void MainWindow::setupNewUI()
 
     mainLayout->addWidget(splitter);
 
+    // 验证码组件指针已在setupNewUI中保存
+
     // 连接信号
     connect(btnLogin, &QPushButton::clicked, this, &MainWindow::on_btnLogin_clicked);
     connect(btnRegister, &QPushButton::clicked, this, &MainWindow::on_btnRegisterUser_clicked);
@@ -768,6 +897,8 @@ void MainWindow::setupNewUI()
     connect(btnQuit, &QPushButton::clicked, this, &MainWindow::on_btnQuit_clicked);
     connect(btnChangePassword, &QPushButton::clicked, this, &MainWindow::on_btnChangePasswordDialog_clicked);
     connect(treeWidgetMenu, &QTreeWidget::itemClicked, this, &MainWindow::onMenuItemClicked);
+    connect(loginRefreshCaptchaBtn, &QPushButton::clicked, this, &MainWindow::refreshLoginCaptcha);
+    connect(registerRefreshCaptchaBtn, &QPushButton::clicked, this, &MainWindow::refreshRegisterCaptcha);
 }
 
 void MainWindow::setupMenuTree()
@@ -2165,4 +2296,87 @@ void MainWindow::showErrorDialog(const QString& title, const QString& message)
     msgBox.adjustSize();
     
     msgBox.exec();
+}
+
+// 验证码相关方法实现
+QString MainWindow::generateCaptchaCode()
+{
+    // 生成4位随机验证码，包含数字和大写字母
+    QString chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    QString captcha;
+    for (int i = 0; i < 4; ++i) {
+        int index = QRandomGenerator::global()->bounded(chars.length());
+        captcha += chars[index];
+    }
+    return captcha;
+}
+
+void MainWindow::showLoginCaptcha()
+{
+    if (loginCaptchaEdit && loginCaptchaLabel && loginRefreshCaptchaBtn) {
+        loginCaptchaCode = generateCaptchaCode();
+        loginCaptchaLabel->setText(loginCaptchaCode);
+        loginCaptchaEdit->setVisible(true);
+        loginCaptchaLabel->setVisible(true);
+        loginRefreshCaptchaBtn->setVisible(true);
+        loginCaptchaEdit->clear();
+        loginCaptchaEdit->setFocus();
+    }
+}
+
+void MainWindow::showRegisterCaptcha()
+{
+    if (registerCaptchaEdit && registerCaptchaLabel && registerRefreshCaptchaBtn) {
+        registerCaptchaCode = generateCaptchaCode();
+        registerCaptchaLabel->setText(registerCaptchaCode);
+        registerCaptchaEdit->setVisible(true);
+        registerCaptchaLabel->setVisible(true);
+        registerRefreshCaptchaBtn->setVisible(true);
+        registerCaptchaEdit->clear();
+        registerCaptchaEdit->setFocus();
+    }
+}
+
+void MainWindow::hideLoginCaptcha()
+{
+    if (loginCaptchaEdit && loginCaptchaLabel && loginRefreshCaptchaBtn) {
+        loginCaptchaEdit->setVisible(false);
+        loginCaptchaLabel->setVisible(false);
+        loginRefreshCaptchaBtn->setVisible(false);
+        loginCaptchaEdit->clear();
+    }
+}
+
+void MainWindow::hideRegisterCaptcha()
+{
+    if (registerCaptchaEdit && registerCaptchaLabel && registerRefreshCaptchaBtn) {
+        registerCaptchaEdit->setVisible(false);
+        registerCaptchaLabel->setVisible(false);
+        registerRefreshCaptchaBtn->setVisible(false);
+        registerCaptchaEdit->clear();
+    }
+}
+
+void MainWindow::refreshLoginCaptcha()
+{
+    if (loginCaptchaLabel) {
+        loginCaptchaCode = generateCaptchaCode();
+        loginCaptchaLabel->setText(loginCaptchaCode);
+        if (loginCaptchaEdit) {
+            loginCaptchaEdit->clear();
+            loginCaptchaEdit->setFocus();
+        }
+    }
+}
+
+void MainWindow::refreshRegisterCaptcha()
+{
+    if (registerCaptchaLabel) {
+        registerCaptchaCode = generateCaptchaCode();
+        registerCaptchaLabel->setText(registerCaptchaCode);
+        if (registerCaptchaEdit) {
+            registerCaptchaEdit->clear();
+            registerCaptchaEdit->setFocus();
+        }
+    }
 }
